@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ProductService.Models.dbProduct;
 
-public partial class ProductDbContext : DbContext
+public partial class ProductDBContext : DbContext
 {
-    public ProductDbContext()
+    public ProductDBContext()
     {
     }
 
-    public ProductDbContext(DbContextOptions<ProductDbContext> options)
+    public ProductDBContext(DbContextOptions<ProductDBContext> options)
         : base(options)
     {
     }
@@ -29,8 +29,6 @@ public partial class ProductDbContext : DbContext
 
     public virtual DbSet<ProductVariant> ProductVariants { get; set; }
 
-    public virtual DbSet<SellerProfile> SellerProfiles { get; set; }
-
     public virtual DbSet<Tag> Tags { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -40,7 +38,7 @@ public partial class ProductDbContext : DbContext
     {
         modelBuilder.Entity<Category>(entity =>
         {
-            entity.HasKey(e => e.CategoryId).HasName("PK__Categori__19093A0B45770CEE");
+            entity.HasKey(e => e.CategoryId).HasName("PK__Categori__19093A0B18DF283F");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Categories_IsDeleted");
 
@@ -58,13 +56,11 @@ public partial class ProductDbContext : DbContext
 
         modelBuilder.Entity<Product>(entity =>
         {
-            entity.HasKey(e => e.ProductId).HasName("PK__Products__B40CC6CDF1B0158D");
+            entity.HasKey(e => e.ProductId).HasName("PK__Products__B40CC6CD6125857F");
 
             entity.HasIndex(e => e.CategoryId, "IX_Products_CategoryId");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Products_IsDeleted");
-
-            entity.HasIndex(e => e.SellerId, "IX_Products_SellerId");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -81,16 +77,11 @@ public partial class ProductDbContext : DbContext
                 .HasForeignKey(d => d.CategoryId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Products_Categories");
-
-            entity.HasOne(d => d.Seller).WithMany(p => p.Products)
-                .HasForeignKey(d => d.SellerId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Products_SellerProfiles");
         });
 
         modelBuilder.Entity<ProductEvent>(entity =>
         {
-            entity.HasKey(e => e.EventId).HasName("PK__ProductE__7944C810D907F196");
+            entity.HasKey(e => e.EventId).HasName("PK__ProductE__7944C81037D4AAF5");
 
             entity.HasIndex(e => e.ProcessedAt, "IX_ProductEvents_ProcessedAt");
 
@@ -109,7 +100,7 @@ public partial class ProductDbContext : DbContext
 
         modelBuilder.Entity<ProductImage>(entity =>
         {
-            entity.HasKey(e => e.ImageId).HasName("PK__ProductI__7516F70C01B3A4D2");
+            entity.HasKey(e => e.ImageId).HasName("PK__ProductI__7516F70C798F3F6A");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -127,7 +118,7 @@ public partial class ProductDbContext : DbContext
 
         modelBuilder.Entity<ProductReview>(entity =>
         {
-            entity.HasKey(e => e.ReviewId).HasName("PK__ProductR__74BC79CE82ACB802");
+            entity.HasKey(e => e.ReviewId).HasName("PK__ProductR__74BC79CEE9EEE24F");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -143,7 +134,7 @@ public partial class ProductDbContext : DbContext
 
         modelBuilder.Entity<ProductTag>(entity =>
         {
-            entity.HasKey(e => e.ProductTagId).HasName("PK__ProductT__88A7F34AA0D6766C");
+            entity.HasKey(e => e.ProductTagId).HasName("PK__ProductT__88A7F34A0257F2D0");
 
             entity.HasIndex(e => e.IsDeleted, "IX_ProductTags_IsDeleted");
 
@@ -172,7 +163,7 @@ public partial class ProductDbContext : DbContext
 
         modelBuilder.Entity<ProductVariant>(entity =>
         {
-            entity.HasKey(e => e.VariantId).HasName("PK__ProductV__0EA233844E732D53");
+            entity.HasKey(e => e.VariantId).HasName("PK__ProductV__0EA2338410E81A7D");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -191,21 +182,9 @@ public partial class ProductDbContext : DbContext
                 .HasConstraintName("FK_ProductVariants_Products");
         });
 
-        modelBuilder.Entity<SellerProfile>(entity =>
-        {
-            entity.HasKey(e => e.SellerId).HasName("PK__SellerPr__7FE3DB81174E2C63");
-
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
-            entity.Property(e => e.StoreName).HasMaxLength(255);
-            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-        });
-
         modelBuilder.Entity<Tag>(entity =>
         {
-            entity.HasKey(e => e.TagId).HasName("PK__Tags__657CF9ACCF0E8B4C");
+            entity.HasKey(e => e.TagId).HasName("PK__Tags__657CF9AC575078BD");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Tags_IsDeleted");
 

@@ -7,8 +7,6 @@ public partial class Product
 {
     public int ProductId { get; set; }
 
-    public int SellerId { get; set; }
-
     public int CategoryId { get; set; }
 
     public string ProductName { get; set; } = null!;
@@ -42,6 +40,4 @@ public partial class Product
     public virtual ICollection<ProductTag> ProductTagsNavigation { get; set; } = new List<ProductTag>();
 
     public virtual ICollection<ProductVariant> ProductVariants { get; set; } = new List<ProductVariant>();
-
-    public virtual SellerProfile Seller { get; set; } = null!;
 }
