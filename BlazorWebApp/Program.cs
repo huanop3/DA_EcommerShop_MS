@@ -2,6 +2,7 @@ using Blazored.LocalStorage;
 using BlazorWebApp.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using MudBlazor.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,7 +15,8 @@ builder.Services.AddHttpClient();
 builder.Services.AddBlazoredLocalStorage();
 // Add services to the container.
 builder.Services.AddScoped<LoginService>();
-
+// Register MudBlazor services
+builder.Services.AddMudServices();
 
 var app = builder.Build();
 

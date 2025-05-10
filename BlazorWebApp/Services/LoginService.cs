@@ -85,7 +85,33 @@ namespace BlazorWebApp.Services
                 return false;
             }
         }
+        /// <summary>
+        /// Lấy thông tin user từ token
+        /// </summary>
+        public async Task<string> GetUserName(){
+            try
+            {
+                var token = await _localStorage.GetItemAsStringAsync("token");
+                if (string.IsNullOrEmpty(token))
+                {
+                    return null;
+                }
 
+                var handler = new JwtSecurityTokenHandler();
+                var jsonToken = handler.ReadToken(token) as JwtSecurityToken;
+
+                if (jsonToken != null)
+                {
+                    var userName = jsonToken.Claims.First(claim => claim.Type == "UserName").Value;
+                    return userName;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi khi lấy tên người dùng: {ex.Message}");
+            }
+            return null;
+        }
         /// <summary>
         /// Đăng nhập vào hệ thống
         /// </summary>

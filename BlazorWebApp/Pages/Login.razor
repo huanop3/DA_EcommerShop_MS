@@ -120,7 +120,7 @@
         if (firstRender)
         {
             await CheckAuthenticationStatus();
-            await LoginService.RefreshTokenAsync();
+            await LoginService.RefreshToken();
             StateHasChanged();
         }
     }

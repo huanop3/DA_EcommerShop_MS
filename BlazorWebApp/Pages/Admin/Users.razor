@@ -354,8 +354,8 @@
                 };
 
                 var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
-                var dialog = await DialogService.Show<ConfirmDialog>("Xác nhận", parameters, options).Result;
-                
+                var dialog = await DialogService.Show<ChangeRoleDialog>("Xác nhận", parameters, options).Result;
+
                 proceed = !dialog.Canceled;
             }
             

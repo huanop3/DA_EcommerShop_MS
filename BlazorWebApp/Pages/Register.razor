@@ -203,8 +203,9 @@
             }
             
             // Attempt registration
-            bool success = await LoginService.Register(registerModel);
-            
+            var result = await LoginService.Register(registerModel);
+            bool success = result.Success;
+
             if (success)
             {
                 // Add a short delay for better UX
