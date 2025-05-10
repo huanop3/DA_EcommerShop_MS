@@ -1,0 +1,283 @@
+@page "/admin/coupons"
+@using MudBlazor
+@layout _AdminLayout
+
+<PageTitle>Coupons Management - Grabit</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12" md="7">
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
+            <div class="d-flex align-center justify-space-between mb-4">
+                <MudText Typo="Typo.h5">Coupons</MudText>
+                <MudTextField @bind-Value="searchString" Placeholder="Search coupons..." 
+                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                             Immediate="true" Class="ml-auto mr-2" Style="max-width: 300px;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+                          OnClick="@(() => selectedCoupon = new CouponModel())">Add Coupon</MudButton>
+            </div>
+            
+            <MudTable Items="@FilteredCoupons" Dense="false" Hover="true" Bordered="false" Striped="false" 
+                     Loading="@isLoading" LoadingProgressColor="Color.Primary" FixedHeader="true" Height="calc(100vh - 250px)"
+                     Class="mt-3">
+                <HeaderContent>
+                    <MudTh Style="width: 120px">Code</MudTh>
+                    <MudTh Style="width: 120px">Discount</MudTh>
+                    <MudTh Style="width: 180px">Validity</MudTh>
+                    <MudTh Style="width: 100px">Usage</MudTh>
+                    <MudTh Style="width: 120px">Status</MudTh>
+                    <MudTh Style="width: 100px; text-align: center">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Code">
+                        <MudChip T="string" Color="Color.Primary" Size="Size.Small" Style="font-family: monospace;">
+                            @context.Code
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Discount">
+                        @if (context.DiscountType == "Percentage")
+                        {
+                            <span>@context.DiscountValue%</span>
+                        }
+                        else
+                        {
+                            <span>$@context.DiscountValue.ToString("F2")</span>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Validity">
+                        <div class="d-flex flex-column">
+                            <MudText Typo="Typo.caption">From: @context.StartDate.ToString("MMM dd, yyyy")</MudText>
+                            <MudText Typo="Typo.caption">To: @context.EndDate.ToString("MMM dd, yyyy")</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Usage">
+                        <MudText Typo="Typo.body2">@context.UsedCount / @(context.MaxUses == 0 ? "∞" : context.MaxUses.ToString())</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Color="@GetStatusColor(context)" Size="Size.Small" Variant="Variant.Filled">
+                            @GetStatus(context)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" 
+                                     OnClick="@(() => selectedCoupon = context)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" 
+                                     OnClick="@(() => DeleteCoupon(context))" />
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] {10, 25, 50}" />
+                </PagerContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" md="5">
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
+            <MudText Typo="Typo.h5" Class="mb-4">
+                @(selectedCoupon?.Id == null ? "Add New Coupon" : "Edit Coupon")
+            </MudText>
+            
+            @if (selectedCoupon != null)
+            {
+                <MudForm @ref="form" @bind-IsValid="@isValid">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="selectedCoupon.Code" Label="Coupon Code" Required="true" RequiredError="Coupon code is required" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudSelect T="string" @bind-Value="selectedCoupon.DiscountType" Label="Discount Type" Required="true">
+                                <MudSelectItem Value="@("Percentage")">Percentage (%)</MudSelectItem>
+                                <MudSelectItem Value="@("Fixed")">Fixed Amount ($)</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudNumericField @bind-Value="selectedCoupon.DiscountValue" Label="Value" Required="true" Min="0" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudDatePicker Date="selectedCoupon.StartDate" DateChanged="@((DateTime? date) => selectedCoupon.StartDate = date.GetValueOrDefault())" Label="Start Date" Required="true" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudDatePicker Date="selectedCoupon.EndDate" DateChanged="@((DateTime? date) => selectedCoupon.EndDate = date.GetValueOrDefault())" Label="End Date" Required="true" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudNumericField @bind-Value="selectedCoupon.MinimumSpend" Label="Minimum Spend" Min="0" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudNumericField @bind-Value="selectedCoupon.MaxUses" Label="Maximum Uses (0 = unlimited)" Min="0" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="selectedCoupon.Description" Label="Description" Lines="2" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudSwitch T="bool" @bind-Checked="selectedCoupon.IsActive" Label="Active" Color="Color.Primary" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" Class="d-flex justify-space-between mt-4">
+                            <MudButton Variant="Variant.Outlined" OnClick="@(() => selectedCoupon = null)">Cancel</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid)" OnClick="SaveCoupon">
+                                @(selectedCoupon.Id == null ? "Create Coupon" : "Update Coupon")
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            }
+            else
+            {
+                <div class="d-flex flex-column justify-center align-center py-8">
+                    <MudIcon Icon="@Icons.Material.Filled.LocalOffer" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.h6">No Coupon Selected</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-2">Select a coupon to edit or create a new one</MudText>
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool isLoading = false;
+    private bool isValid = false;
+    private string searchString = "";
+    private CouponModel selectedCoupon = null;
+    private MudForm form;
+    
+    private List<CouponModel> coupons = new List<CouponModel>
+    {
+        new CouponModel 
+        { 
+            Id = "CPN-001", 
+            Code = "WELCOME25", 
+            DiscountType = "Percentage", 
+            DiscountValue = 25, 
+            MinimumSpend = 50,
+            MaxUses = 100,
+            UsedCount = 45,
+            IsActive = true,
+            StartDate = DateTime.Now.AddDays(-30),
+            EndDate = DateTime.Now.AddDays(60),
+            Description = "Welcome discount for new customers"
+        },
+        new CouponModel 
+        { 
+            Id = "CPN-002", 
+            Code = "SUMMER2023", 
+            DiscountType = "Percentage", 
+            DiscountValue = 15, 
+            MinimumSpend = 25,
+            MaxUses = 0,
+            UsedCount = 136,
+            IsActive = true,
+            StartDate = DateTime.Now.AddDays(-10),
+            EndDate = DateTime.Now.AddDays(50),
+            Description = "Summer special discount"
+        },
+        new CouponModel 
+        { 
+            Id = "CPN-003", 
+            Code = "FREESHIP", 
+            DiscountType = "Fixed", 
+            DiscountValue = 10, 
+            MinimumSpend = 40,
+            MaxUses = 200,
+            UsedCount = 78,
+            IsActive = true,
+            StartDate = DateTime.Now.AddDays(-20),
+            EndDate = DateTime.Now.AddDays(10),
+            Description = "Free shipping coupon"
+        },
+        new CouponModel 
+        { 
+            Id = "CPN-004", 
+            Code = "WINTER2022", 
+            DiscountType = "Percentage", 
+            DiscountValue = 20, 
+            MinimumSpend = 30,
+            MaxUses = 150,
+            UsedCount = 150,
+            IsActive = false,
+            StartDate = DateTime.Now.AddDays(-90),
+            EndDate = DateTime.Now.AddDays(-30),
+            Description = "Winter special discount"
+        }
+    };
+
+    private IEnumerable<CouponModel> FilteredCoupons => coupons
+        .Where(c => string.IsNullOrWhiteSpace(searchString) || 
+                   c.Code.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                   c.Description.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(c => c.IsActive)
+        .ThenByDescending(c => c.EndDate);
+
+    private string GetStatus(CouponModel coupon)
+    {
+        if (!coupon.IsActive)
+            return "Inactive";
+        if (coupon.EndDate < DateTime.Now)
+            return "Expired";
+        if (coupon.StartDate > DateTime.Now)
+            return "Upcoming";
+        if (coupon.MaxUses > 0 && coupon.UsedCount >= coupon.MaxUses)
+            return "Exhausted";
+        return "Active";
+    }
+
+    private Color GetStatusColor(CouponModel coupon)
+    {
+        string status = GetStatus(coupon);
+        return status switch
+        {
+            "Active" => Color.Success,
+            "Upcoming" => Color.Info,
+            "Expired" => Color.Error,
+            "Exhausted" => Color.Warning,
+            "Inactive" => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private void SaveCoupon()
+    {
+        if (selectedCoupon.Id == null)
+        {
+            // Add new coupon
+            selectedCoupon.Id = $"CPN-{(coupons.Count + 1):000}";
+            coupons.Add(selectedCoupon);
+        }
+        else
+        {
+            // Update existing coupon
+            var index = coupons.FindIndex(c => c.Id == selectedCoupon.Id);
+            if (index >= 0)
+                coupons[index] = selectedCoupon;
+        }
+        
+        selectedCoupon = null;
+    }
+
+    private void DeleteCoupon(CouponModel coupon)
+    {
+        coupons.Remove(coupon);
+    }
+
+    public class CouponModel
+    {
+        public string Id { get; set; }
+        public string Code { get; set; }
+        public string DiscountType { get; set; } = "Percentage";
+        public double DiscountValue { get; set; }
+        public double MinimumSpend { get; set; }
+        public int MaxUses { get; set; }
+        public int UsedCount { get; set; }
+        public DateTime StartDate { get; set; } = DateTime.Now;
+        public DateTime EndDate { get; set; } = DateTime.Now.AddMonths(1);
+        public string Description { get; set; } = "";
+        public bool IsActive { get; set; } = true;
+    }
+}

@@ -1,0 +1,161 @@
+@page "/payment"
+
+<PageTitle>Payment Method - Checkout</PageTitle>
+
+<link href="css/checkout.css" rel="stylesheet" />
+
+<div class="checkout-container">
+    <div class="border-container">
+        <div class="breadcrumb">
+            <div class="container">
+                <a href="/">Home</a> / <a href="/cart">Cart</a> / <a href="/checkout">Checkout</a> / <span>Payment</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="checkout-section">
+        <div class="checkout-main">
+            <h2 class="checkout-title">Checkout Details</h2>
+            
+            <div class="checkout-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Shipping Address</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step active">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Payment Method</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Review Order</div>
+                </div>
+            </div>
+
+            <div class="checkout-content">
+                <div class="checkout-step-content active" id="payment-method">
+                    <h3 class="form-section-title">Select Payment Method</h3>
+                    
+                    <div class="payment-options">
+                        <div class="payment-option">
+                            <input type="radio" id="credit-card" name="payment-method" checked />
+                            <label for="credit-card">Credit Card</label>
+                            <div class="payment-details active">
+                                <div class="form-group">
+                                    <label for="card-number">Card Number *</label>
+                                    <input type="text" id="card-number" class="form-control" placeholder="1234 5678 9012 3456" />
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="expiration">Expiration Date *</label>
+                                        <input type="text" id="expiration" class="form-control" placeholder="MM/YY" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cvv">CVV *</label>
+                                        <input type="text" id="cvv" class="form-control" placeholder="123" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="card-name">Name on Card *</label>
+                                    <input type="text" id="card-name" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="payment-option">
+                            <input type="radio" id="paypal" name="payment-method" />
+                            <label for="paypal">PayPal</label>
+                        </div>
+                        
+                        <div class="payment-option">
+                            <input type="radio" id="cash-on-delivery" name="payment-method" />
+                            <label for="cash-on-delivery">Cash on Delivery</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <a href="/checkout" class="button-link button-secondary back-step-btn">Back to Shipping</a>
+                        <a href="/revieworder" class="button-link button-primary next-step-btn">Review Order</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="order-summary-sidebar">
+            <div class="order-summary-box">
+                <h3>Order Summary</h3>
+                
+                <div class="order-summary-items">
+                    @foreach (var item in orderItems)
+                    {
+                        <div class="summary-item">
+                            <div class="summary-item-image">
+                                <img src="@item.ImageUrl" alt="@item.Name" />
+                            </div>
+                            <div class="summary-item-info">
+                                <span class="summary-item-name">@item.Name</span>
+                                <span class="summary-item-quantity">Qty: @item.Quantity</span>
+                            </div>
+                            <span class="summary-item-price">$@((item.Price * item.Quantity).ToString("F2"))</span>
+                        </div>
+                    }
+                </div>
+                
+                <div class="summary-total">
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span>$@SubTotal.ToString("F2")</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Shipping</span>
+                        <span>$@ShippingCost.ToString("F2")</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Tax</span>
+                        <span>$@TaxAmount.ToString("F2")</span>
+                    </div>
+                    <div class="summary-row discount">
+                        <span>Discount</span>
+                        <span>-$@DiscountAmount.ToString("F2")</span>
+                    </div>
+                    <div class="summary-row order-total">
+                        <span>Order Total</span>
+                        <span>$@OrderTotal.ToString("F2")</span>
+                    </div>
+                </div>
+            
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class OrderItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string ImageUrl { get; set; }
+        public decimal Price { get; set; }
+        public int Quantity { get; set; }
+    }
+
+    private List<OrderItem> orderItems = new List<OrderItem>
+    {
+        new OrderItem { Id = 1, Name = "Women's wallet Hand Purse", ImageUrl = "images/products/wallet.jpg", Price = 70, Quantity = 1 },
+        new OrderItem { Id = 2, Name = "Rose Gold Earring", ImageUrl = "images/products/earring.jpg", Price = 80, Quantity = 1 },
+        new OrderItem { Id = 3, Name = "Apple", ImageUrl = "images/products/apple.jpg", Price = 12, Quantity = 2 }
+    };
+
+    private decimal SubTotal => orderItems.Sum(item => item.Price * item.Quantity);
+    private decimal ShippingCost => 15.00m;
+    private decimal TaxAmount => Math.Round(SubTotal * 0.08m, 2);
+    private decimal DiscountAmount => 10.00m;
+    private decimal OrderTotal => SubTotal + ShippingCost + TaxAmount - DiscountAmount;
+
+    protected override void OnInitialized()
+    {
+        // JavaScript could be used here to toggle between payment methods
+    }
+}

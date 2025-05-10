@@ -1,0 +1,328 @@
+@page "/checkout"
+
+<PageTitle>Checkout</PageTitle>
+
+<link href="css/checkout.css" rel="stylesheet" />
+
+<div class="checkout-container">
+    <div class="border-container">
+        <div class="breadcrumb">
+            <div class="container">
+                <a href="/">Home</a> / <a href="/cart">Cart</a> / <span>Checkout</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="checkout-section">
+        <div class="checkout-main">
+            <h2 class="checkout-title">Checkout Details</h2>
+            
+            <div class="checkout-steps">
+                <div class="step active">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Shipping Address</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Payment Method</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Review Order</div>
+                </div>
+            </div>
+
+            <div class="checkout-content">
+                <!-- Step 1: Shipping Address Form -->
+                <div class="checkout-step-content active" id="shipping-address">
+                    <div class="checkout-form">
+                        <div class="form-section">
+                            <h3 class="form-section-title">Contact Information</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="email">Email Address *</label>
+                                    <input type="email" id="email" class="form-control" placeholder="example@email.com" required />
+                                </div>
+                                <div class="form-group">
+                                    <label for="phone">Phone Number *</label>
+                                    <input type="tel" id="phone" class="form-control" placeholder="(123) 456-7890" required />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3 class="form-section-title">Shipping Address</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="firstName">First Name *</label>
+                                    <input type="text" id="firstName" class="form-control" required />
+                                </div>
+                                <div class="form-group">
+                                    <label for="lastName">Last Name *</label>
+                                    <input type="text" id="lastName" class="form-control" required />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="address1">Address Line 1 *</label>
+                                <input type="text" id="address1" class="form-control" placeholder="Street address, P.O. box" required />
+                            </div>
+                            <div class="form-group">
+                                <label for="address2">Address Line 2</label>
+                                <input type="text" id="address2" class="form-control" placeholder="Apartment, suite, unit, building, floor, etc." />
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="country">Country *</label>
+                                    <div class="pure-dropdown">
+                                        <div class="dropdown-header" @onclick="ToggleCountryDropdown">
+                                            <span>@(string.IsNullOrEmpty(SelectedCountry) ? "Select Country" : Countries.FirstOrDefault(c => c.Code == SelectedCountry)?.Name)</span>
+                                            <i class="dropdown-arrow"></i>
+                                        </div>
+                                        <div class="dropdown-list-container @(IsCountryDropdownOpen ? "open" : "")">
+                                            <ul class="dropdown-list">
+                                                @foreach (var country in Countries)
+                                                {
+                                                    <li class="dropdown-item @(country.Code == SelectedCountry ? "selected" : "")" 
+                                                        @onclick="() => SelectCountry(country.Code)">
+                                                        <span>@country.Name</span>
+                                                        @if (country.Code == SelectedCountry)
+                                                        {
+                                                            <span class="checkmark">✓</span>
+                                                        }
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="state">State/Province *</label>
+                                    <div class="pure-dropdown">
+                                        <div class="dropdown-header" @onclick="ToggleStateDropdown">
+                                            <span>@(string.IsNullOrEmpty(SelectedState) ? "Select State" : StatesForSelectedCountry.FirstOrDefault(s => s.Code == SelectedState)?.Name)</span>
+                                            <i class="dropdown-arrow"></i>
+                                        </div>
+                                        <div class="dropdown-list-container @(IsStateDropdownOpen ? "open" : "")">
+                                            <ul class="dropdown-list">
+                                                @if (StatesForSelectedCountry.Any())
+                                                {
+                                                    @foreach (var state in StatesForSelectedCountry)
+                                                    {
+                                                        <li class="dropdown-item @(state.Code == SelectedState ? "selected" : "")" 
+                                                            @onclick="() => SelectState(state.Code)">
+                                                            <span>@state.Name</span>
+                                                            @if (state.Code == SelectedState)
+                                                            {
+                                                                <span class="checkmark">✓</span>
+                                                            }
+                                                        </li>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <li class="dropdown-item disabled">Please select a country first</li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="city">City *</label>
+                                    <input type="text" id="city" class="form-control" required />
+                                </div>
+                                <div class="form-group">
+                                    <label for="zipCode">Zip/Postal Code *</label>
+                                    <input type="text" id="zipCode" class="form-control" required />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="saveAddress" />
+                                <label for="saveAddress">Save this address for future orders</label>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="sameAsBilling" checked />
+                                <label for="sameAsBilling">Billing address is the same as shipping address</label>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <a href="/cart" class="button-link button-secondary back-to-cart">Back to Cart</a>
+                            <a href="/payment" class="button-link button-primary next-step-btn">Continue to Payment</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="order-summary-sidebar">
+            <div class="order-summary-box">
+                <h3>Order Summary</h3>
+                
+                <div class="order-summary-items">
+                    @foreach (var item in orderItems)
+                    {
+                        <div class="summary-item">
+                            <div class="summary-item-image">
+                                <img src="@item.ImageUrl" alt="@item.Name" />
+                            </div>
+                            <div class="summary-item-info">
+                                <span class="summary-item-name">@item.Name</span>
+                                <span class="summary-item-quantity">Qty: @item.Quantity</span>
+                            </div>
+                            <span class="summary-item-price">$@((item.Price * item.Quantity).ToString("F2"))</span>
+                        </div>
+                    }
+                </div>
+                
+                <div class="summary-total">
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span>$@SubTotal.ToString("F2")</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Shipping</span>
+                        <span>$@ShippingCost.ToString("F2")</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Tax</span>
+                        <span>$@TaxAmount.ToString("F2")</span>
+                    </div>
+                    <div class="summary-row discount">
+                        <span>Discount</span>
+                        <span>-$@DiscountAmount.ToString("F2")</span>
+                    </div>
+                    <div class="summary-row order-total">
+                        <span>Order Total</span>
+                        <span>$@OrderTotal.ToString("F2")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class OrderItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string ImageUrl { get; set; }
+        public decimal Price { get; set; }
+        public int Quantity { get; set; }
+    }
+
+    private List<OrderItem> orderItems = new List<OrderItem>
+    {
+        new OrderItem { Id = 1, Name = "Women's wallet Hand Purse", ImageUrl = "images/products/wallet.jpg", Price = 70, Quantity = 1 },
+        new OrderItem { Id = 2, Name = "Rose Gold Earring", ImageUrl = "images/products/earring.jpg", Price = 80, Quantity = 1 },
+        new OrderItem { Id = 3, Name = "Apple", ImageUrl = "images/products/apple.jpg", Price = 12, Quantity = 2 }
+    };
+
+    private decimal SubTotal => orderItems.Sum(item => item.Price * item.Quantity);
+    private decimal ShippingCost => 15.00m;
+    private decimal TaxAmount => Math.Round(SubTotal * 0.08m, 2);
+    private decimal DiscountAmount => 10.00m;
+    private decimal OrderTotal => SubTotal + ShippingCost + TaxAmount - DiscountAmount;
+
+    private int currentStep = 1;
+
+    private void UpdateStepUI()
+    {
+        // This would be implemented with JS interop in a real app
+        // For now, we'll use StateHasChanged
+        StateHasChanged();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // JS interop initialization would go here
+        }
+    }
+
+    private string SelectedCountry { get; set; } = "";
+    private string SelectedState { get; set; } = "";
+    private bool IsCountryDropdownOpen { get; set; } = false;
+    private bool IsStateDropdownOpen { get; set; } = false;
+
+    private void ToggleCountryDropdown()
+    {
+        IsCountryDropdownOpen = !IsCountryDropdownOpen;
+        if (IsCountryDropdownOpen)
+            IsStateDropdownOpen = false;
+    }
+
+    private void ToggleStateDropdown()
+    {
+        IsStateDropdownOpen = !IsStateDropdownOpen;
+        if (IsStateDropdownOpen)
+            IsCountryDropdownOpen = false;
+    }
+
+    private void SelectCountry(string countryCode)
+    {
+        SelectedCountry = countryCode;
+        SelectedState = ""; // Reset state when country changes
+        IsCountryDropdownOpen = false;
+        StateHasChanged();
+    }
+
+    private void SelectState(string stateCode)
+    {
+        SelectedState = stateCode;
+        IsStateDropdownOpen = false;
+        StateHasChanged();
+    }
+
+    private List<Region> Countries = new List<Region>
+    {
+        new Region { Code = "US", Name = "United States" },
+        new Region { Code = "CA", Name = "Canada" },
+        new Region { Code = "UK", Name = "United Kingdom" },
+        new Region { Code = "AU", Name = "Australia" },
+        new Region { Code = "DE", Name = "Germany" },
+        new Region { Code = "FR", Name = "France" }
+    };
+
+    private Dictionary<string, List<Region>> StatesByCountry = new Dictionary<string, List<Region>>
+    {
+        ["US"] = new List<Region>
+        {
+            new Region { Code = "CA", Name = "California" },
+            new Region { Code = "NY", Name = "New York" },
+            new Region { Code = "TX", Name = "Texas" },
+            new Region { Code = "FL", Name = "Florida" }
+        },
+        ["CA"] = new List<Region>
+        {
+            new Region { Code = "ON", Name = "Ontario" },
+            new Region { Code = "QC", Name = "Quebec" },
+            new Region { Code = "BC", Name = "British Columbia" }
+        },
+        ["UK"] = new List<Region>
+        {
+            new Region { Code = "ENG", Name = "England" },
+            new Region { Code = "SCO", Name = "Scotland" },
+            new Region { Code = "WAL", Name = "Wales" }
+        }
+    };
+
+    private List<Region> StatesForSelectedCountry => 
+        string.IsNullOrEmpty(SelectedCountry) || !StatesByCountry.ContainsKey(SelectedCountry) 
+            ? new List<Region>() 
+            : StatesByCountry[SelectedCountry];
+    
+    private class Region
+    {
+        public string Code { get; set; }
+        public string Name { get; set; }
+    }
+}

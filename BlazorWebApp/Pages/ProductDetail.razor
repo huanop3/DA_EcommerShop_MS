@@ -1,0 +1,426 @@
+@page "/product-detail"
+@page "/product/{id:int}"
+
+<PageTitle>Product Detail - Grocery Shop</PageTitle>
+
+<link href="css/product-detail.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<div class="product-contaiber">
+    <div class="border-container">
+    <div class="breadcrumb">
+        <div class="container">
+            <a href="/">Home</a> / <a href="/products">Products</a> / <span>Product Details</span>
+        </div>
+    </div>
+</div>
+
+
+<section class="product-detail-section">
+    <div class="container">
+        <div class="product-detail-container">
+            <div class="product-images">
+                <div class="main-image">
+                    <img src="@ImageUrls[SelectedImageIndex]" alt="Product Image" />
+                </div>
+                <div class="thumbnail-images">
+                    @for (int i = 0; i < ImageUrls.Length; i++)
+                    {
+                        var index = i;
+                        <div class="thumbnail @(SelectedImageIndex == index ? "active" : "")"
+                            @onclick="() => SelectImage(index)">
+                            <img src="@ImageUrls[i]" alt="Thumbnail @(i + 1)" />
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="product-info1">
+                <h1 class="product-title">Potato Chips 52g, American Cream & Onion Flavour, Crunchy Chips & Snacks.</h1>
+
+                <div class="product-ratings">
+                    <div class="stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="far fa-star"></i>
+                    </div>
+                    <span class="rating-count">| 992 Ratings</span>
+                </div>
+
+                <div class="product-details-grid">
+                    <div class="details-column">
+                        <div class="price-row">
+                            <h2 class="current-price">$664.00</h2>
+                            <span class="discount-badge">-78%</span>
+                        </div>
+                        <div class="mrp-row">
+                            <span>M.R.P. : </span>
+                            <span class="old-price">$2,999.00</span>
+                        </div>
+                    </div>
+                    <div class="details-column">
+                        <div class="sku-row">
+                            <span class="label">SKU#:</span>
+                            <span class="value">WH12</span>
+                        </div>
+                        <div class="stock-status">
+                            <span class="in-stock">IN STOCK</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="product-description">
+                    <p>Lorem ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been
+                        the industry's standard dummy text ever since the 1990.</p>
+                </div>
+
+                <div class="product-specs">
+                    <ul>
+                        <li><span class="spec-label">Closure :</span> Hook & Loop</li>
+                        <li><span class="spec-label">Sole :</span> Polyvinyl Chloride</li>
+                        <li><span class="spec-label">Width :</span> Medium</li>
+                        <li><span class="spec-label">Outer Material :</span> A-Grade Standard Quality</li>
+                    </ul>
+                </div>
+
+                <div class="product-options">
+                    <h3>WEIGHT</h3>
+                    <div class="weight-options">
+                        <button class="weight-option active">250g</button>
+                        <button class="weight-option">500g</button>
+                        <button class="weight-option">1kg</button>
+                        <button class="weight-option">2kg</button>
+                    </div>
+                </div>
+
+                <div class="add-to-cart-section">
+                    <div class="quantity-selector">
+                        <button class="qty-btn" @onclick="DecreaseQuantity">-</button>
+                        <input type="text" readonly value="@Quantity" />
+                        <button class="qty-btn" @onclick="IncreaseQuantity">+</button>
+                    </div>
+
+                    <button class="add-to-cart-btn" @onclick="AddToCart">
+                        ADD TO CART
+                    </button>
+
+                    <button class="wishlist-btn">
+                        <i class="far fa-heart"></i>
+                    </button>
+
+                    <button class="view-btn">
+                        <i class="far fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="product-tabs">
+            <div class="tab-header">
+                <button class="tab-btn active" @onclick="() => SelectTab(0)">Description</button>
+                <button class="tab-btn" @onclick="() => SelectTab(1)">Additional Information</button>
+                <button class="tab-btn" @onclick="() => SelectTab(2)">Reviews (3)</button>
+            </div>
+            <div class="tab-content">
+                <div class="tab-pane @(ActiveTabIndex == 0 ? "active" : "")">
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas fermentum, diam non iaculis
+                        finibus, ipsum arcu sollicitudin dolor, ut cursus sapien sem sed purus. Donec vitae fringilla
+                        tortor, sed fermentum nunc. Pellentesque fermentum nunc feugiat maximus finibus. Donec justo
+                        sem, dignissim eu pretium ut, pellentesque at ante.</p>
+                    <p>Cras commodo dapibus sem, ut volutpat odio aliquam vel. Mauris molestie blandit eros vel
+                        placerat. Curabitur in diam id urna cursus cursus in at quam. Fusce iaculis, odio at tincidunt
+                        aliquam, sem urna fringilla ligula, nec sollicitudin odio eros eget purus. Donec at diam
+                        aliquet, iaculis nibh quis, mattis ipsum.</p>
+                    <ul>
+                        <li>100% organic fresh vegetables</li>
+                        <li>Non-GMO products</li>
+                        <li>Locally grown and harvested</li>
+                        <li>Rich in vitamins and minerals</li>
+                    </ul>
+                </div>
+
+                <div class="tab-pane @(ActiveTabIndex == 1 ? "active" : "")">
+                    <table class="product-attributes">
+                        <tbody>
+                            <tr>
+                                <th>Weight</th>
+                                <td>250g, 500g, 1kg, 5kg</td>
+                            </tr>
+                            <tr>
+                                <th>Origin</th>
+                                <td>Local Farm</td>
+                            </tr>
+                            <tr>
+                                <th>Quality</th>
+                                <td>Organic Certified</td>
+                            </tr>
+                            <tr>
+                                <th>Freshness</th>
+                                <td>1-2 days</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="tab-pane @(ActiveTabIndex == 2 ? "active" : "")">
+                    <div class="reviews-container">
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div class="reviewer-info">
+                                    <h4>John Doe</h4>
+                                    <span class="review-date">June 15, 2023</span>
+                                </div>
+                                <div class="review-rating">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                </div>
+                            </div>
+                            <div class="review-content">
+                                <p>Very fresh vegetables! I'm very satisfied with the quality and taste.</p>
+                            </div>
+                        </div>
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div class="reviewer-info">
+                                    <h4>Sarah Johnson</h4>
+                                    <span class="review-date">May 23, 2023</span>
+                                </div>
+                                <div class="review-rating">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="far fa-star"></i>
+                                </div>
+                            </div>
+                            <div class="review-content">
+                                <p>Good quality but delivery took longer than expected.</p>
+                            </div>
+                        </div>
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div class="reviewer-info">
+                                    <h4>Mike Brown</h4>
+                                    <span class="review-date">April 10, 2023</span>
+                                </div>
+                                <div class="review-rating">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star-half-alt"></i>
+                                </div>
+                            </div>
+                            <div class="review-content">
+                                <p>Great product! Will definitely buy again. The vegetables were very fresh and tasty.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="related-products">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="section-title text-center mb-4">
+                            <h2 class="section-heading">Related <span style="color: #5CAF90 !important;">Products</span>
+                            </h2>
+                            <p class="section-tagline">Browse The Collection of Top Products</p>
+                        </div>
+
+                        <div class="products-slider-controls">
+                            <button class="slider-prev"><i class="fa fa-arrow-left"></i></button>
+                            <button class="slider-next"><i class="fa fa-arrow-right"></i></button>
+                        </div>
+
+                        <div class="products-row">
+                            <!-- Product 1 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-sale">Sale</div>
+                                <div class="product-thumb">
+                                    <img src="images/product-detail/related-1.jpg" alt="Fresh Red Tomatoes">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Vegetables</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Fresh Red Tomatoes</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(4)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$13.50</span>
+                                        <span class="current-price">$10.50</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product 2 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-new">New</div>
+                                <div class="product-thumb">
+                                    <img src="images/product-detail/related-2.jpg" alt="Green Bell Peppers">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Vegetables</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Green Bell Peppers</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(3)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="current-price">$8.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product 3 -->
+                            <div class="product-card">
+                                <div class="product-thumb">
+                                    <img src="images/product-detail/related-3.jpg" alt="Fresh Strawberries">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Fruits</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Fresh Strawberries</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(4)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="current-price">$12.80</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product 4 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-sale">Sale</div>
+                                <div class="product-thumb">
+                                    <img src="images/product-detail/related-4.jpg" alt="Fresh Avocados">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Fruits</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Fresh Avocados</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(3)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$11.00</span>
+                                        <span class="current-price">$9.35</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</section>
+</div>
+
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private int Quantity { get; set; } = 1;
+    private int SelectedImageIndex { get; set; } = 0;
+    private int ActiveTabIndex { get; set; } = 0;
+    private string[] ImageUrls = new[] {
+"images/product-detail/main-product.jpg",
+"images/product-detail/thumb-2.jpg",
+"images/product-detail/thumb-3.jpg",
+"images/product-detail/thumb-4.jpg",
+};
+
+    private void IncreaseQuantity()
+    {
+        Quantity++;
+    }
+
+    private void DecreaseQuantity()
+    {
+        if (Quantity > 1)
+            Quantity--;
+    }
+
+    private void SelectImage(int index)
+    {
+        SelectedImageIndex = index;
+    }
+
+    private void SelectTab(int index)
+    {
+        ActiveTabIndex = index;
+    }
+
+    private void AddToCart()
+    {
+        // Add to cart logic here
+        Console.WriteLine($"Added {Quantity} of product {Id} to cart");
+    }
+}

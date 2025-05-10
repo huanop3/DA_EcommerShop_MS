@@ -1,0 +1,160 @@
+@page "/admin/products"
+@using MudBlazor
+@layout _AdminLayout
+
+<PageTitle>Products Management - Grabit</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudPaper Elevation="0" Class="d-flex align-center justify-space-between pa-4" Style="background-color: white; border-radius: 4px;">
+            <MudText Typo="Typo.h4">Products</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+                      OnClick="@(() => OpenProductDialog())">Add Product</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12">
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
+            <MudGrid>
+                <MudItem xs="12" md="8">
+                    <MudTextField Label="Search" @bind-Value="searchString" Placeholder="Search products..." 
+                                 Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                                 Immediate="true" Class="mt-0" />
+                </MudItem>
+                <MudItem xs="12" md="4" Class="d-flex justify-end">
+                    <MudSelect T="string" Label="Category" @bind-Value="selectedCategory" Class="mr-2">
+                        <MudSelectItem Value="@("")">All Categories</MudSelectItem>
+                        @foreach (var category in categories)
+                        {
+                            <MudSelectItem Value="@category">@category</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudSelect T="string" Label="Sort By" @bind-Value="selectedSorting">
+                        <MudSelectItem Value="@("newest")">Newest</MudSelectItem>
+                        <MudSelectItem Value="@("price_asc")">Price: Low to High</MudSelectItem>
+                        <MudSelectItem Value="@("price_desc")">Price: High to Low</MudSelectItem>
+                        <MudSelectItem Value="@("name_asc")">Name: A-Z</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+            
+            <MudTable Items="@FilteredProducts" Dense="false" Hover="true" Bordered="false" Striped="false" 
+                     Loading="@isLoading" LoadingProgressColor="Color.Primary" FixedHeader="true" Height="calc(100vh - 300px)"
+                     Class="mt-3">
+                <HeaderContent>
+                    <MudTh Style="width: 100px">ID</MudTh>
+                    <MudTh>Product</MudTh>
+                    <MudTh Style="width: 150px">Category</MudTh>
+                    <MudTh Style="width: 100px">Price</MudTh>
+                    <MudTh Style="width: 100px">Stock</MudTh>
+                    <MudTh Style="width: 120px">Status</MudTh>
+                    <MudTh Style="width: 100px; text-align: center">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Product ID">@context.Id</MudTd>
+                    <MudTd DataLabel="Product">
+                        <div class="d-flex align-center">
+                            <MudAvatar Size="Size.Medium" Square="true" Class="mr-2" Style="border-radius: 4px;" 
+                                      Image="@context.ImageUrl"></MudAvatar>
+                            <MudText Typo="Typo.body1">@context.Name</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Category">@context.Category</MudTd>
+                    <MudTd DataLabel="Price">$@context.Price.ToString("F2")</MudTd>
+                    <MudTd DataLabel="Stock">@context.Stock</MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Color="@GetStockStatusColor(context.Stock)" Size="Size.Small" 
+                                Variant="Variant.Filled">
+                            @GetStockStatus(context.Stock)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" 
+                                      OnClick="@(() => OpenProductDialog(context))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" 
+                                      OnClick="@(() => DeleteProduct(context))" />
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] {10, 25, 50}" />
+                </PagerContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool isLoading = false;
+    private string searchString = "";
+    private string selectedCategory = "";
+    private string selectedSorting = "newest";
+    private ProductModel selectedProduct = null;
+
+    private List<string> categories = new List<string> {
+        "Dried Fruits", "Fresh Fruits", "Vegetables", "Cookies", "Drinks"
+    };
+    
+    private List<ProductModel> products = new List<ProductModel>
+    {
+        new ProductModel { Id = "PRD-001", Name = "Organic Apples", Category = "Fresh Fruits", Price = 12.99, Stock = 48, ImageUrl = "/images/products/apple.jpg" },
+        new ProductModel { Id = "PRD-002", Name = "Mixed Nuts Berries Pack", Category = "Dried Fruits", Price = 45.50, Stock = 5, ImageUrl = "/images/products/mixed-nuts.jpg" },
+        new ProductModel { Id = "PRD-003", Name = "Fresh Mango Juice Pack", Category = "Drinks", Price = 46.00, Stock = 3, ImageUrl = "/images/products/mango-juice.jpg" },
+        new ProductModel { Id = "PRD-004", Name = "Multi Grain Combo Cookies", Category = "Cookies", Price = 30.00, Stock = 25, ImageUrl = "/images/products/cookies.jpg" },
+        new ProductModel { Id = "PRD-005", Name = "Organic Broccoli", Category = "Vegetables", Price = 8.99, Stock = 36, ImageUrl = "/images/products/broccoli.jpg" },
+        new ProductModel { Id = "PRD-006", Name = "Almond Butter Jar", Category = "Dried Fruits", Price = 28.50, Stock = 19, ImageUrl = "/images/products/almond-butter.jpg" },
+        new ProductModel { Id = "PRD-007", Name = "Organic Bananas", Category = "Fresh Fruits", Price = 6.99, Stock = 52, ImageUrl = "/images/products/banana.jpg" },
+        new ProductModel { Id = "PRD-008", Name = "Fresh Orange Juice", Category = "Drinks", Price = 35.00, Stock = 15, ImageUrl = "/images/products/orange-juice.jpg" },
+    };
+
+    private IEnumerable<ProductModel> FilteredProducts => products
+        .Where(p => string.IsNullOrWhiteSpace(searchString) || 
+                   p.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                   p.Id.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                   p.Category.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        .Where(p => string.IsNullOrWhiteSpace(selectedCategory) || p.Category == selectedCategory)
+        .OrderByDescending(p => p.Id);
+
+    private string GetStockStatus(int stock)
+    {
+        return stock switch
+        {
+            <= 5 => "Critical Stock",
+            <= 10 => "Low Stock",
+            _ => "In Stock"
+        };
+    }
+
+    private Color GetStockStatusColor(int stock)
+    {
+        return stock switch
+        {
+            <= 5 => Color.Error,
+            <= 10 => Color.Warning,
+            _ => Color.Success
+        };
+    }
+
+    private void OpenProductDialog(ProductModel product = null)
+    {
+        selectedProduct = product;
+        // In a real app, you'd open a dialog to edit or add a product
+    }
+
+    private void DeleteProduct(ProductModel product)
+    {
+        // In a real app, you'd prompt for confirmation and delete from database
+    }
+
+    public class ProductModel
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Category { get; set; }
+        public double Price { get; set; }
+        public int Stock { get; set; }
+        public string ImageUrl { get; set; }
+    }
+}
+

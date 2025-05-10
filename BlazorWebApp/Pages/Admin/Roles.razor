@@ -1,0 +1,469 @@
+@page "/admin/roles"
+@using MudBlazor
+@layout _AdminLayout
+
+<PageTitle>Roles Management - Grabit</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudPaper Elevation="0" Class="d-flex align-center justify-space-between pa-4" Style="background-color: white; border-radius: 4px;">
+            <MudText Typo="Typo.h4">User Roles</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+                      OnClick="@(() => OpenRoleDialog())">Add Role</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12" md="7">
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
+            <MudTextField @bind-Value="searchString" Placeholder="Search roles..." 
+                         Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                         Immediate="true" Class="mt-0 mb-4" />
+            
+            <MudTable Items="@FilteredRoles" Dense="false" Hover="true" Bordered="false" Striped="false" 
+                     Loading="@isLoading" LoadingProgressColor="Color.Primary" FixedHeader="true" Height="calc(100vh - 300px)"
+                     Class="mt-3">
+                <HeaderContent>
+                    <MudTh Style="width: 60px; text-align: center">ID</MudTh>
+                    <MudTh Style="width: 160px">Role</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh Style="width: 120px; text-align: center">Users</MudTh>
+                    <MudTh Style="width: 120px; text-align: center">Status</MudTh>
+                    <MudTh Style="width: 120px; text-align: center">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="ID">@context.Id</MudTd>
+                    <MudTd DataLabel="Role">
+                        <div class="d-flex align-center">
+                            <MudAvatar Color="@GetRoleColor(context.Name)" Size="Size.Small" Class="mr-3">@context.Name[0]</MudAvatar>
+                            <MudText Typo="Typo.body1">@context.Name</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Description">@context.Description</MudTd>
+                    <MudTd DataLabel="Users" Style="text-align: center">@context.UserCount</MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudSwitch T="bool" @bind-Checked="@context.IsActive" Color="Color.Primary" 
+                                  OnChanged="@(() => UpdateRoleStatus(context))" />
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" 
+                                     OnClick="@(() => selectedRole = context)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" 
+                                     OnClick="@(() => DeleteRole(context))" Disabled="@(!CanDeleteRole(context))" />
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] {10, 25, 50}" />
+                </PagerContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" md="5">
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
+            <MudText Typo="Typo.h5" Class="mb-4">
+                @(selectedRole?.Id == 0 ? "Add New Role" : "Edit Role")
+            </MudText>
+            
+            @if (selectedRole != null)
+            {
+                <MudForm @ref="form" @bind-IsValid="@isValid">
+                    <MudGrid>
+                        <MudItem xs="12" Class="d-flex justify-center">
+                            <MudAvatar Color="@GetRoleColor(selectedRole.Name)" Size="Size.Large" Class="mb-3">
+                                @(string.IsNullOrEmpty(selectedRole.Name) ? "?" : selectedRole.Name[0].ToString())
+                            </MudAvatar>
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="selectedRole.Name" Label="Role Name" Required="true" RequiredError="Role name is required" 
+                                        Disabled="@(!CanEditRoleName(selectedRole))" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="selectedRole.Description" Label="Description" Lines="3" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudSwitch T="bool" @bind-Checked="selectedRole.IsActive" Label="Active" Color="Color.Primary" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">Permissions</MudText>
+                            <MudPaper Elevation="0" Class="pa-3" Style="background-color: #f8f9fa; border-radius: 4px;">
+                                <MudGrid>
+                                    <!-- Dashboard Permissions -->
+                                    <MudItem xs="12" Class="mb-2">
+                                        <MudText Typo="Typo.subtitle2">Dashboard</MudText>
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ViewDashboard" 
+                                                   Label="View Dashboard" Color="Color.Primary" />
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ViewReports" 
+                                                   Label="View Reports" Color="Color.Primary" />
+                                    </MudItem>
+                                    
+                                    <!-- Product Permissions -->
+                                    <MudItem xs="12" Class="mt-2 mb-2">
+                                        <MudText Typo="Typo.subtitle2">Products</MudText>
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ViewProducts" 
+                                                   Label="View Products" Color="Color.Primary" />
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ManageProducts" 
+                                                   Label="Manage Products" Color="Color.Primary" />
+                                    </MudItem>
+                                    
+                                    <!-- Order Permissions -->
+                                    <MudItem xs="12" Class="mt-2 mb-2">
+                                        <MudText Typo="Typo.subtitle2">Orders</MudText>
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ViewOrders" 
+                                                   Label="View Orders" Color="Color.Primary" />
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ManageOrders" 
+                                                   Label="Manage Orders" Color="Color.Primary" />
+                                    </MudItem>
+                                    
+                                    <!-- User Permissions -->
+                                    <MudItem xs="12" Class="mt-2 mb-2">
+                                        <MudText Typo="Typo.subtitle2">Users</MudText>
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ViewUsers" 
+                                                   Label="View Users" Color="Color.Primary" />
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ManageUsers" 
+                                                   Label="Manage Users" Color="Color.Primary" />
+                                    </MudItem>
+                                    
+                                    <!-- Settings Permissions -->
+                                    <MudItem xs="12" Class="mt-2 mb-2">
+                                        <MudText Typo="Typo.subtitle2">Settings</MudText>
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ViewSettings" 
+                                                   Label="View Settings" Color="Color.Primary" />
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudCheckBox T="bool" @bind-Checked="selectedRole.Permissions.ManageSettings" 
+                                                   Label="Manage Settings" Color="Color.Primary" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudPaper>
+                        </MudItem>
+                        
+                        <MudItem xs="12" Class="d-flex justify-space-between mt-4">
+                            <MudButton Variant="Variant.Outlined" OnClick="@(() => selectedRole = null)">Cancel</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid)" OnClick="SaveRole">
+                                @(selectedRole.Id == 0 ? "Create Role" : "Update Role")
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            }
+            else
+            {
+                <div class="d-flex flex-column justify-center align-center py-8">
+                    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.h6">No Role Selected</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-2">Select a role to edit or create a new one</MudText>
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudDialog @bind-IsVisible="dialogVisible" Options="dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Confirm Delete</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete this role? This action cannot be undone.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="@(() => dialogVisible = false)">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="ConfirmDeleteRole">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool isLoading = false;
+    private bool isValid = false;
+    private string searchString = "";
+    private RoleModel selectedRole = null;
+    private RoleModel roleToDelete = null;
+    private bool dialogVisible = false;
+    private MudForm form;
+    
+    private DialogOptions dialogOptions = new DialogOptions { CloseOnEscapeKey = true };
+    
+    private List<RoleModel> roles = new List<RoleModel>
+    {
+        new RoleModel 
+        { 
+            Id = 1, 
+            Name = "Admin", 
+            Description = "Full access to all system features and settings", 
+            UserCount = 3, 
+            IsActive = true,
+            IsSystem = true,
+            Permissions = new PermissionSet
+            {
+                ViewDashboard = true,
+                ViewReports = true,
+                ViewProducts = true,
+                ManageProducts = true,
+                ViewOrders = true,
+                ManageOrders = true,
+                ViewUsers = true,
+                ManageUsers = true,
+                ViewSettings = true,
+                ManageSettings = true
+            }
+        },
+        new RoleModel 
+        { 
+            Id = 2, 
+            Name = "Seller", 
+            Description = "Can manage products, view orders, and basic customer information", 
+            UserCount = 15, 
+            IsActive = true,
+            IsSystem = true,
+            Permissions = new PermissionSet
+            {
+                ViewDashboard = true,
+                ViewReports = true,
+                ViewProducts = true,
+                ManageProducts = true,
+                ViewOrders = true,
+                ManageOrders = false,
+                ViewUsers = false,
+                ManageUsers = false,
+                ViewSettings = false,
+                ManageSettings = false
+            }
+        },
+        new RoleModel 
+        { 
+            Id = 3, 
+            Name = "Customer", 
+            Description = "Basic user account for shopping and order tracking", 
+            UserCount = 540, 
+            IsActive = true,
+            IsSystem = true,
+            Permissions = new PermissionSet
+            {
+                ViewDashboard = false,
+                ViewReports = false,
+                ViewProducts = false,
+                ManageProducts = false,
+                ViewOrders = false,
+                ManageOrders = false,
+                ViewUsers = false,
+                ManageUsers = false,
+                ViewSettings = false,
+                ManageSettings = false
+            }
+        },
+        new RoleModel 
+        { 
+            Id = 4, 
+            Name = "Shipper", 
+            Description = "Access to delivery features and order status updates", 
+            UserCount = 28, 
+            IsActive = true,
+            IsSystem = true,
+            Permissions = new PermissionSet
+            {
+                ViewDashboard = false,
+                ViewReports = false,
+                ViewProducts = false,
+                ManageProducts = false,
+                ViewOrders = true,
+                ManageOrders = true,
+                ViewUsers = false,
+                ManageUsers = false,
+                ViewSettings = false,
+                ManageSettings = false
+            }
+        },
+        new RoleModel 
+        { 
+            Id = 5, 
+            Name = "Moderator", 
+            Description = "Can moderate reviews, comments, and some content", 
+            UserCount = 7, 
+            IsActive = true,
+            IsSystem = true,
+            Permissions = new PermissionSet
+            {
+                ViewDashboard = true,
+                ViewReports = false,
+                ViewProducts = true,
+                ManageProducts = false,
+                ViewOrders = true,
+                ManageOrders = false,
+                ViewUsers = true,
+                ManageUsers = false,
+                ViewSettings = false,
+                ManageSettings = false
+            }
+        },
+        new RoleModel 
+        { 
+            Id = 6, 
+            Name = "Custom Role", 
+            Description = "Custom role with limited permissions", 
+            UserCount = 2, 
+            IsActive = true,
+            IsSystem = false,
+            Permissions = new PermissionSet
+            {
+                ViewDashboard = true,
+                ViewReports = true,
+                ViewProducts = true,
+                ManageProducts = false,
+                ViewOrders = true,
+                ManageOrders = false,
+                ViewUsers = false,
+                ManageUsers = false,
+                ViewSettings = false,
+                ManageSettings = false
+            }
+        }
+    };
+
+    private IEnumerable<RoleModel> FilteredRoles => roles
+        .Where(r => string.IsNullOrWhiteSpace(searchString) || 
+                    r.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                    r.Description.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(r => r.Name);
+
+    private Color GetRoleColor(string roleName)
+    {
+        if (string.IsNullOrEmpty(roleName))
+            return Color.Default;
+            
+        return roleName.ToLower() switch
+        {
+            "admin" => Color.Error,
+            "seller" => Color.Success,
+            "customer" => Color.Info,
+            "shipper" => Color.Warning,
+            "moderator" => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+    
+    private bool CanDeleteRole(RoleModel role)
+    {
+        // System roles cannot be deleted
+        if (role.IsSystem)
+            return false;
+            
+        // Roles with users cannot be deleted
+        if (role.UserCount > 0)
+            return false;
+            
+        return true;
+    }
+    
+    private bool CanEditRoleName(RoleModel role)
+    {
+        // System role names cannot be changed
+        return !role.IsSystem;
+    }
+
+    private void OpenRoleDialog()
+    {
+        selectedRole = new RoleModel { Id = 0, IsActive = true, Permissions = new PermissionSet() };
+    }
+    
+    private void UpdateRoleStatus(RoleModel role)
+    {
+        // In a real app, you'd update the role status in the database
+    }
+
+    private void DeleteRole(RoleModel role)
+    {
+        if (!CanDeleteRole(role))
+            return;
+            
+        roleToDelete = role;
+        dialogVisible = true;
+    }
+    
+    private void ConfirmDeleteRole()
+    {
+        if (roleToDelete != null)
+        {
+            roles.Remove(roleToDelete);
+            roleToDelete = null;
+        }
+        
+        dialogVisible = false;
+    }
+
+    private void SaveRole()
+    {
+        if (selectedRole.Id == 0)
+        {
+            // Add new role
+            int maxId = roles.Max(r => r.Id);
+            selectedRole.Id = maxId + 1;
+            roles.Add(selectedRole);
+        }
+        else
+        {
+            // Update existing role
+            var index = roles.FindIndex(r => r.Id == selectedRole.Id);
+            if (index >= 0)
+                roles[index] = selectedRole;
+        }
+        
+        selectedRole = null;
+    }
+
+    public class RoleModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; } = "";
+        public int UserCount { get; set; }
+        public bool IsActive { get; set; } = true;
+        public bool IsSystem { get; set; } = false;
+        public PermissionSet Permissions { get; set; } = new PermissionSet();
+    }
+    
+    public class PermissionSet
+    {
+        // Dashboard
+        public bool ViewDashboard { get; set; }
+        public bool ViewReports { get; set; }
+        
+        // Products
+        public bool ViewProducts { get; set; }
+        public bool ManageProducts { get; set; }
+        
+        // Orders
+        public bool ViewOrders { get; set; }
+        public bool ManageOrders { get; set; }
+        
+        // Users
+        public bool ViewUsers { get; set; }
+        public bool ManageUsers { get; set; }
+        
+        // Settings
+        public bool ViewSettings { get; set; }
+        public bool ManageSettings { get; set; }
+    }
+}

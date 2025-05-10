@@ -1,0 +1,148 @@
+@page "/revieworder"
+
+<PageTitle>Review Order - Checkout</PageTitle>
+
+<link href="css/checkout.css" rel="stylesheet" />
+
+<div class="checkout-container">
+    <div class="border-container">
+        <div class="breadcrumb">
+            <div class="container">
+                <a href="/">Home</a> / <a href="/cart">Cart</a> / <a href="/checkout">Checkout</a> / <a href="/payment">Payment</a> / <span>Review</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="checkout-section">
+        <div class="checkout-main full-width">
+            <h2 class="checkout-title">Checkout Details</h2>
+            
+            <div class="checkout-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Shipping Address</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Payment Method</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step active">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Review Order</div>
+                </div>
+            </div>
+
+            <div class="checkout-content">
+                <h3 class="review-title">Review Your Order</h3>
+                
+                <div class="simple-review">
+                    <h4>Order Items (@orderItems.Count)</h4>
+                    <div class="simple-items">
+                        @foreach (var item in orderItems)
+                        {
+                            <div class="simple-item">
+                                <div class="simple-item-left">
+                                    <img src="@item.ImageUrl" alt="@item.Name" />
+                                    <div class="simple-item-info">
+                                        <div class="simple-item-name">@item.Name</div>
+                                        <div class="simple-item-qty">Qty: @item.Quantity</div>
+                                    </div>
+                                </div>
+                                <div class="simple-item-price">$@((item.Price * item.Quantity).ToString("F2"))</div>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="shipping-info">
+                        <div class="info-header">
+                            <h4>Shipping Details</h4>
+                            <a href="/checkout" class="simple-edit">Edit</a>
+                        </div>
+                        <div class="info-content">
+                            <p><strong>Name:</strong> John Doe</p>
+                            <p><strong>Address:</strong> 123 Main St, Apt 4B, New York, NY 10001, United States</p>
+                            <p><strong>Phone:</strong> (123) 456-7890</p>
+                            <p><strong>Email:</strong> john.doe@example.com</p>
+                        </div>
+                    </div>
+                    
+                    <div class="shipping-info payment-info">
+                        <div class="info-header">
+                            <h4>Payment Method</h4>
+                            <a href="/payment" class="simple-edit">Edit</a>
+                        </div>
+                        <div class="info-content">
+                            <p><strong>Payment Type:</strong> Credit Card</p>
+                            <p><strong>Card Number:</strong> **** **** **** 1234</p>
+                            <p><strong>Expiry Date:</strong> 09/25</p>
+                            <p><strong>Name on Card:</strong> John Doe</p>
+                        </div>
+                    </div>
+                    
+                    <div class="simple-totals">
+                        <div class="simple-total-row">
+                            <span>Subtotal</span>
+                            <span>$@SubTotal.ToString("F2")</span>
+                        </div>
+                        <div class="simple-total-row">
+                            <span>Shipping</span>
+                            <span>$@ShippingCost.ToString("F2")</span>
+                        </div>
+                        <div class="simple-total-row">
+                            <span>Tax</span>
+                            <span>$@TaxAmount.ToString("F2")</span>
+                        </div>
+                        <div class="simple-total-row discount">
+                            <span>Discount</span>
+                            <span>-$@DiscountAmount.ToString("F2")</span>
+                        </div>
+                        <div class="simple-total-row final-total">
+                            <span>Order Total</span>
+                            <span>$@OrderTotal.ToString("F2")</span>
+                        </div>
+                    </div>
+                    
+                    <div class="review-actions">
+                        <a href="/payment" class="button-link button-secondary back-step-btn">Back to Payment</a>
+                        <button class="button-link button-primary place-order-btn" @onclick="PlaceOrder">Place Order</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class OrderItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string ImageUrl { get; set; }
+        public decimal Price { get; set; }
+        public int Quantity { get; set; }
+    }
+
+    private List<OrderItem> orderItems = new List<OrderItem>
+    {
+        new OrderItem { Id = 1, Name = "Women's wallet Hand Purse", ImageUrl = "images/products/wallet.jpg", Price = 70, Quantity = 1 },
+        new OrderItem { Id = 2, Name = "Rose Gold Earring", ImageUrl = "images/products/earring.jpg", Price = 80, Quantity = 1 },
+        new OrderItem { Id = 3, Name = "Apple", ImageUrl = "images/products/apple.jpg", Price = 12, Quantity = 2 }
+    };
+
+    private decimal SubTotal => orderItems.Sum(item => item.Price * item.Quantity);
+    private decimal ShippingCost => 15.00m;
+    private decimal TaxAmount => Math.Round(SubTotal * 0.08m, 2);
+    private decimal DiscountAmount => 10.00m;
+    private decimal OrderTotal => SubTotal + ShippingCost + TaxAmount - DiscountAmount;
+
+    private void PlaceOrder()
+    {
+        // Order placement logic would go here
+        Console.WriteLine("Order placed!");
+        
+        // Could navigate to confirmation page
+        // NavigationManager.NavigateTo("/order-confirmation");
+    }
+}

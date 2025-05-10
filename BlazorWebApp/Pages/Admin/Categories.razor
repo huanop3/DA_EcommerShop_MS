@@ -1,0 +1,187 @@
+@page "/admin/categories"
+@using MudBlazor
+@layout _AdminLayout
+
+<PageTitle>Categories Management - Grabit</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12" md="7">
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
+            <div class="d-flex align-center justify-space-between mb-4">
+                <MudText Typo="Typo.h5">Categories</MudText>
+                <MudTextField @bind-Value="searchString" Placeholder="Search categories..." 
+                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                             Immediate="true" Class="ml-auto mr-2" Style="max-width: 300px;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+                          OnClick="@(() => selectedCategory = new CategoryModel())">Add Category</MudButton>
+            </div>
+            
+            <MudTable Items="@FilteredCategories" Dense="false" Hover="true" Bordered="false" Striped="false" 
+                     Loading="@isLoading" LoadingProgressColor="Color.Primary" FixedHeader="true" Height="calc(100vh - 250px)"
+                     Class="mt-3">
+                <HeaderContent>
+                    <MudTh Style="width: 80px; text-align: center">Icon</MudTh>
+                    <MudTh>Name</MudTh>
+                    <MudTh Style="width: 100px; text-align: center">Products</MudTh>
+                    <MudTh Style="width: 100px; text-align: center">Status</MudTh>
+                    <MudTh Style="width: 100px; text-align: center">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Icon">
+                        <MudAvatar Color="@GetRandomColor(context.Id)" Size="Size.Medium" Class="rounded" Variant="Variant.Outlined">
+                            <MudIcon Icon="@context.Icon" />
+                        </MudAvatar>
+                    </MudTd>
+                    <MudTd DataLabel="Name">@context.Name</MudTd>
+                    <MudTd DataLabel="Products">@context.ProductCount</MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudSwitch T="bool" @bind-Checked="@context.IsActive" Color="Color.Primary" />
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" 
+                                     OnClick="@(() => selectedCategory = context)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" 
+                                     OnClick="@(() => DeleteCategory(context))" />
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] {10, 25, 50}" />
+                </PagerContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" md="5">
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
+            <MudText Typo="Typo.h5" Class="mb-4">
+                @(selectedCategory?.Id == null ? "Add New Category" : "Edit Category")
+            </MudText>
+            
+            @if (selectedCategory != null)
+            {
+                <MudForm @ref="form" @bind-IsValid="@isValid">
+                    <MudGrid>
+                        <MudItem xs="12" Class="d-flex justify-center">
+                            <MudAvatar Color="@GetRandomColor(selectedCategory.Id ?? "new")" Size="Size.Large" Class="mb-3">
+                                <MudIcon Icon="@(string.IsNullOrEmpty(selectedCategory.Icon) ? Icons.Material.Filled.Category : selectedCategory.Icon)" />
+                            </MudAvatar>
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="selectedCategory.Name" Label="Category Name" Required="true" RequiredError="Category name is required" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudSelect T="string" @bind-Value="selectedCategory.Icon" Label="Icon">
+                                <MudSelectItem Value="@Icons.Material.Filled.Category">Category</MudSelectItem>
+                                <MudSelectItem Value="@Icons.Material.Filled.Fastfood">Food</MudSelectItem>
+                                <MudSelectItem Value="@Icons.Material.Filled.Warehouse">Warehouse</MudSelectItem>
+                                <MudSelectItem Value="@Icons.Material.Filled.Inventory">Inventory</MudSelectItem>
+                                <MudSelectItem Value="@Icons.Material.Filled.Blender">Blender</MudSelectItem>
+                                <MudSelectItem Value="@Icons.Material.Filled.Cookie">Cookie</MudSelectItem>
+                                <MudSelectItem Value="@Icons.Material.Filled.EmojiFoodBeverage">Beverage</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="selectedCategory.Description" Label="Description" Lines="3" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudSwitch T="bool" @bind-Checked="selectedCategory.IsActive" Label="Active" Color="Color.Primary" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" Class="d-flex justify-space-between mt-4">
+                            <MudButton Variant="Variant.Outlined" OnClick="@(() => selectedCategory = null)">Cancel</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid)" OnClick="SaveCategory">
+                                @(selectedCategory.Id == null ? "Create Category" : "Update Category")
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            }
+            else
+            {
+                <div class="d-flex flex-column justify-center align-center py-8">
+                    <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.h6">No Category Selected</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-2">Select a category to edit or create a new one</MudText>
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool isLoading = false;
+    private bool isValid = false;
+    private string searchString = "";
+    private CategoryModel selectedCategory = null;
+    private MudForm form;
+    
+    private Random random = new Random();
+    
+    private List<CategoryModel> categories = new List<CategoryModel>
+    {
+        new CategoryModel { Id = "CAT-001", Name = "Dried Fruits", ProductCount = 24, IsActive = true, Icon = Icons.Material.Filled.Cookie, Description = "Variety of dried fruits including nuts, berries, etc." },
+        new CategoryModel { Id = "CAT-002", Name = "Fresh Fruits", ProductCount = 36, IsActive = true, Icon = Icons.Material.Filled.Category, Description = "Fresh seasonal fruits" },
+        new CategoryModel { Id = "CAT-003", Name = "Vegetables", ProductCount = 28, IsActive = true, Icon = Icons.Material.Filled.Fastfood, Description = "Fresh organic vegetables" },
+        new CategoryModel { Id = "CAT-004", Name = "Cookies", ProductCount = 15, IsActive = false, Icon = Icons.Material.Filled.Cookie, Description = "Handmade cookies and biscuits" },
+        new CategoryModel { Id = "CAT-005", Name = "Drinks", ProductCount = 12, IsActive = true, Icon = Icons.Material.Filled.EmojiFoodBeverage, Description = "Fresh juices and beverages" }
+    };
+
+    private IEnumerable<CategoryModel> FilteredCategories => categories
+        .Where(c => string.IsNullOrWhiteSpace(searchString) || 
+                   c.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                   c.Description.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(c => c.Name);
+
+    private Color GetRandomColor(string seed)
+    {
+        if (string.IsNullOrEmpty(seed))
+            return Color.Primary;
+            
+        return (seed.GetHashCode() % 5) switch 
+        {
+            0 => Color.Primary,
+            1 => Color.Secondary,
+            2 => Color.Info,
+            3 => Color.Success,
+            _ => Color.Warning
+        };
+    }
+
+    private void SaveCategory()
+    {
+        if (selectedCategory.Id == null)
+        {
+            // Add new category
+            selectedCategory.Id = $"CAT-{(categories.Count + 1):000}";
+            categories.Add(selectedCategory);
+        }
+        else
+        {
+            // Update existing category
+            var index = categories.FindIndex(c => c.Id == selectedCategory.Id);
+            if (index >= 0)
+                categories[index] = selectedCategory;
+        }
+        
+        selectedCategory = null;
+    }
+
+    private void DeleteCategory(CategoryModel category)
+    {
+        categories.Remove(category);
+    }
+
+    public class CategoryModel
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Icon { get; set; } = Icons.Material.Filled.Category;
+        public string Description { get; set; } = "";
+        public int ProductCount { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}

@@ -1,0 +1,381 @@
+@page "/admin/users"
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+@using DA_Ecommershop.Models
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@layout _AdminLayout
+<PageTitle>Users Management - Grabit</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudPaper Elevation="0" Class="d-flex align-center justify-space-between pa-4" Style="background-color: white; border-radius: 4px;">
+            <MudText Typo="Typo.h4">Users</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+                      OnClick="@(() => OpenUserDialog())">Add User</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12">
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
+            <MudGrid>
+                <MudItem xs="12" md="8">
+                    <MudTextField @bind-Value="searchString" Placeholder="Search users..." 
+                                 Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                                 Immediate="true" Class="mt-0" />
+                </MudItem>
+                <MudItem xs="12" md="4" Class="d-flex justify-end">
+                    <MudSelect T="string" Label="Role" @bind-Value="selectedRole" Class="mr-2">
+                        <MudSelectItem Value="@("")">All Roles</MudSelectItem>
+                        @foreach (var role in availableRoles)
+                        {
+                            <MudSelectItem Value="@role.Name">@role.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudSelect T="string" Label="Status" @bind-Value="selectedStatus">
+                        <MudSelectItem Value="@("")">All Statuses</MudSelectItem>
+                        <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                        <MudSelectItem Value="@("Inactive")">Inactive</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+            
+            <MudTable Items="@FilteredUsers" Dense="false" Hover="true" Bordered="false" Striped="false" 
+                     Loading="@isLoading" LoadingProgressColor="Color.Primary" FixedHeader="true" Height="calc(100vh - 300px)"
+                     Class="mt-3">
+                <HeaderContent>
+                    <MudTh Style="width: 100px">User ID</MudTh>
+                    <MudTh Style="width: 180px">Full Name</MudTh>
+                    <MudTh>Email</MudTh>
+                    <MudTh Style="width: 120px">Role</MudTh>
+                    <MudTh Style="width: 120px">Joined Date</MudTh>
+                    <MudTh Style="width: 100px; text-align: center">Status</MudTh>
+                    <MudTh Style="width: 80px; text-align: center">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="User ID">@context.Id</MudTd>
+                    <MudTd DataLabel="Full Name">
+                        <div class="d-flex align-center">
+                            <MudAvatar Size="Size.Small" Class="mr-2" Image="@context.AvatarUrl">@context.Initials</MudAvatar>
+                            <MudText Typo="Typo.body1">@context.FullName</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Email">@context.Email</MudTd>
+                    <MudTd DataLabel="Role">
+                        <div class="d-flex align-center">
+                            <MudChip T="string" Color="@GetRoleColor(context.Role)" Size="Size.Small" 
+                                    Variant="Variant.Filled" Class="mr-2">
+                                @context.Role
+                            </MudChip>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Default"
+                                      OnClick="@(() => ShowRoleDialogProgrammatically(context))" />
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Joined Date">@context.JoinedDate.ToShortDateString()</MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudSwitch T="bool" @bind-Checked="@context.IsActive" Color="Color.Primary" 
+                                  OnChanged="@(() => UpdateUserStatus(context))" />
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
+                            <MudMenuItem Icon="@Icons.Material.Filled.Visibility">View Details</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenUserDialog(context))">Edit User</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error">Delete User</MudMenuItem>
+                        </MudMenu>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] {10, 25, 50}" />
+                </PagerContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<!-- Dialog chỉnh sửa người dùng -->
+<MudDialog @bind-IsVisible="dialogVisible" Options="dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(selectedUser?.Id == null ? "Add New User" : "Edit User")</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (selectedUser != null)
+        {
+            <MudForm @ref="form" @bind-IsValid="@isValid">
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="selectedUser.FullName" 
+                                    Label="Full Name" Required="true" RequiredError="Full name is required" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="selectedUser.Email" 
+                                    Label="Email" Required="true" RequiredError="Email is required"
+                                    Validation="@(new EmailAddressAttribute() {ErrorMessage = "Invalid email address"})" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="string" @bind-Value="selectedUser.Role" Label="Role" Required="true">
+                            @foreach (var role in availableRoles)
+                            {
+                                <MudSelectItem Value="@role.Name">
+                                    <div class="d-flex align-center">
+                                        <MudAvatar Color="@GetRoleColor(role.Name)" Size="Size.Small" Class="mr-2">
+                                            @role.Name[0]
+                                        </MudAvatar>
+                                        <MudText>@role.Name</MudText>
+                                    </div>
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudDatePicker @bind-Value="selectedUser.JoinedDate" Label="Joined Date" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="selectedUser.Address" Label="Address" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" @bind-Checked="selectedUser.IsActive" Label="Active" Color="Color.Primary" />
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => dialogVisible = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SaveUser" Disabled="@(!isValid)">
+            @(selectedUser?.Id == null ? "Add User" : "Save Changes")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool isLoading = false;
+    private bool isValid = false;
+    private string searchString = "";
+    private string selectedRole = "";
+    private string selectedStatus = "";
+    private UserModel selectedUser = null;
+    private MudForm form;
+    private bool dialogVisible = false;
+    private string newRole = "";
+    
+    private DialogOptions dialogOptions = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium };
+
+    private List<UserModel> users = new List<UserModel>
+    {
+        new UserModel { Id = "USR-0001", FullName = "John Doe", Email = "john.doe@example.com", Role = "Admin", JoinedDate = new DateTime(2022, 3, 15), IsActive = true, AvatarUrl = "/images/admin/avatar1.jpg" },
+        new UserModel { Id = "USR-0002", FullName = "Jane Smith", Email = "jane.smith@example.com", Role = "Customer", JoinedDate = new DateTime(2022, 4, 20), IsActive = true, AvatarUrl = "/images/admin/avatar2.jpg" },
+        new UserModel { Id = "USR-0003", FullName = "Robert Johnson", Email = "robert.j@example.com", Role = "Store Manager", JoinedDate = new DateTime(2022, 5, 10), IsActive = true, AvatarUrl = "/images/admin/avatar3.jpg" },
+        new UserModel { Id = "USR-0004", FullName = "Emily Davis", Email = "emily.d@example.com", Role = "Customer", JoinedDate = new DateTime(2022, 6, 5), IsActive = false, AvatarUrl = "/images/admin/avatar4.jpg" },
+        new UserModel { Id = "USR-0005", FullName = "Michael Wilson", Email = "michael.w@example.com", Role = "Customer", JoinedDate = new DateTime(2022, 7, 12), IsActive = true, AvatarUrl = "/images/admin/avatar5.jpg" },
+        new UserModel { Id = "USR-0006", FullName = "Sarah Taylor", Email = "sarah.t@example.com", Role = "Customer", JoinedDate = new DateTime(2022, 8, 1), IsActive = true, AvatarUrl = "/images/admin/avatar6.jpg" },
+        new UserModel { Id = "USR-0007", FullName = "Tom Harris", Email = "tom.h@example.com", Role = "Store Manager", JoinedDate = new DateTime(2022, 9, 8), IsActive = false, AvatarUrl = "" },
+        new UserModel { Id = "USR-0008", FullName = "Jessica Brown", Email = "jessica.b@example.com", Role = "Customer", JoinedDate = new DateTime(2022, 10, 15), IsActive = true, AvatarUrl = "" }
+    };
+    
+    private List<RoleModel> availableRoles = new List<RoleModel>
+    {
+        new RoleModel { Name = "Admin", Description = "Full access to all features and settings" },
+        new RoleModel { Name = "Seller", Description = "Can manage products and orders" },
+        new RoleModel { Name = "Customer", Description = "Regular user account" },
+        new RoleModel { Name = "Shipper", Description = "Delivery personnel account" },
+        new RoleModel { Name = "Moderator", Description = "Can moderate content and reviews" }
+    };
+
+    private IEnumerable<UserModel> FilteredUsers => users
+        .Where(u => string.IsNullOrWhiteSpace(searchString) || 
+                   u.FullName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                   u.Email.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                   u.Id.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        .Where(u => string.IsNullOrWhiteSpace(selectedRole) || u.Role == selectedRole)
+        .Where(u => string.IsNullOrWhiteSpace(selectedStatus) || 
+                   (selectedStatus == "Active" && u.IsActive) || 
+                   (selectedStatus == "Inactive" && !u.IsActive));
+
+    private Color GetRoleColor(string role)
+    {
+        return role switch
+        {
+            "Admin" => Color.Error,
+            "Store Manager" => Color.Warning,
+            "Customer" => Color.Info,
+            "Seller" => Color.Success,
+            "Shipper" => Color.Primary,
+            "Moderator" => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    private void OpenUserDialog(UserModel user = null)
+    {
+        if (user == null)
+        {
+            // Creating a new user
+            selectedUser = new UserModel
+            {
+                Id = $"USR-{users.Count + 1:D4}",
+                JoinedDate = DateTime.Now,
+                IsActive = true,
+                Role = "Customer" // Default role
+            };
+        }
+        else
+        {
+            // Editing existing user - create a clone to avoid direct modifications
+            selectedUser = new UserModel
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                Role = user.Role,
+                JoinedDate = user.JoinedDate,
+                IsActive = user.IsActive,
+                AvatarUrl = user.AvatarUrl,
+                Address = user.Address
+            };
+        }
+        
+        dialogVisible = true;
+    }
+
+    private void SaveUser()
+    {
+        if (selectedUser != null)
+        {
+            var existingUser = users.FirstOrDefault(u => u.Id == selectedUser.Id);
+            
+            if (existingUser == null)
+            {
+                // Add new user
+                users.Add(selectedUser);
+                Snackbar.Add("User created successfully", Severity.Success);
+            }
+            else
+            {
+                // Update existing user
+                int index = users.IndexOf(existingUser);
+                users[index] = selectedUser;
+                Snackbar.Add("User updated successfully", Severity.Success);
+            }
+        }
+        
+        dialogVisible = false;
+    }
+
+    private void UpdateUserStatus(UserModel user)
+    {
+        // In a real app, you'd update the user's status in the database
+        string status = user.IsActive ? "activated" : "deactivated";
+        Snackbar.Add($"User {user.FullName} {status}", Severity.Info);
+    }
+    
+    private async Task ShowRoleDialogProgrammatically(UserModel user)
+    {
+        try
+        {
+            // Tạo bản sao của người dùng để tránh thay đổi trực tiếp
+            selectedUser = new UserModel
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                Role = user.Role,
+                JoinedDate = user.JoinedDate,
+                IsActive = user.IsActive,
+                AvatarUrl = user.AvatarUrl,
+                Address = user.Address
+            };
+            
+            // Tạo tham số cho dialog
+            var parameters = new DialogParameters();
+            parameters.Add("User", selectedUser);
+            parameters.Add("AvailableRoles", availableRoles);
+            
+            // Hiển thị dialog
+            var dialog = await DialogService.ShowAsync<ChangeRoleDialog>("Change User Role", parameters);
+            var result = await dialog.Result;
+            
+            // Kiểm tra kết quả và cập nhật vai trò
+            if (!result.Canceled && result.Data is string newRole && !string.IsNullOrEmpty(newRole))
+            {
+                Console.WriteLine($"Selected new role: {newRole}"); // Log for debugging
+                await UpdateUserRole(selectedUser, newRole);
+            }
+            else
+            {
+                Console.WriteLine("Dialog canceled or no role selected");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in ShowRoleDialogProgrammatically: {ex.Message}");
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task UpdateUserRole(UserModel userToUpdate, string newRole)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(newRole))
+            {
+                Snackbar.Add("Không thể cập nhật vai trò: Vai trò mới không được để trống", Severity.Warning);
+                return;
+            }
+            
+            // Tìm người dùng thực tế trong danh sách
+            var actualUser = users.FirstOrDefault(u => u.Id == userToUpdate.Id);
+            if (actualUser == null)
+            {
+                Snackbar.Add("Không tìm thấy người dùng để cập nhật", Severity.Error);
+                return;
+            }
+            
+            if (actualUser.Role == newRole)
+            {
+                Snackbar.Add("Vai trò không thay đổi", Severity.Info);
+                return;
+            }
+            
+            // Lưu vai trò cũ để hiển thị thông báo
+            string oldRole = actualUser.Role;
+            
+            // Xác nhận đặc biệt cho vai trò Admin
+            bool proceed = true;
+            if (newRole == "Admin" && oldRole != "Admin")
+            {
+                var parameters = new DialogParameters
+                {
+                    ["ContentText"] = $"Bạn có chắc chắn muốn cấp quyền Admin cho người dùng {actualUser.FullName}? " +
+                                      "Điều này sẽ cho phép họ truy cập đầy đủ vào hệ thống.",
+                    ["ButtonText"] = "Xác nhận",
+                    ["Color"] = Color.Error
+                };
+
+                var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+                var dialog = await DialogService.Show<ConfirmDialog>("Xác nhận", parameters, options).Result;
+                
+                proceed = !dialog.Canceled;
+            }
+            
+            if (proceed)
+            {
+                // Cập nhật vai trò mới cho người dùng thực tế
+                actualUser.Role = newRole;
+                
+                // Hiển thị thông báo thành công
+                string message = $"Đã thay đổi vai trò của người dùng {actualUser.FullName} từ {oldRole} thành {newRole}";
+                Snackbar.Add(message, Severity.Success);
+                
+                // Đảm bảo UI được cập nhật
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in UpdateUserRole: {ex.Message}");
+            Snackbar.Add($"Lỗi khi cập nhật vai trò: {ex.Message}", Severity.Error);
+        }
+    }
+}

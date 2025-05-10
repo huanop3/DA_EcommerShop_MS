@@ -1,0 +1,573 @@
+@page "/cart"
+
+<PageTitle>Shopping Cart</PageTitle>
+
+<link href="css/cart.css" rel="stylesheet" />
+
+<div class="cart-container">
+    <div class="border-container">
+        <div class="breadcrumb">
+            <div class="container">
+                <a href="/">Home</a> / <span>Cart</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="cart-section">
+        <div class="cart-items">
+            <table class="cart-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Total</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="product-cell">
+                            <div class="product-info">
+                                <div class="product-image">
+                                    <img src="images/products/wallet.jpg" alt="Women's wallet Hand Purse" />
+                                </div>
+                                <span class="product-name">Women's wallet Hand Purse</span>
+                            </div>
+                        </td>
+                        <td class="price-cell">$70</td>
+                        <td class="quantity-cell">
+                            <div class="quantity-selector">
+                                <button class="qty-btn" @onclick="() => DecreaseQuantity(0)">-</button>
+                                <input type="text" readonly value="@cartItems[0].Quantity" />
+                                <button class="qty-btn" @onclick="() => IncreaseQuantity(0)">+</button>
+                            </div>
+                        </td>
+                        <td class="total-cell">$@(70 * cartItems[0].Quantity)</td>
+                        <td class="action-cell">
+                            <button class="remove-btn" aria-label="Remove item" @onclick="() => RemoveItem(0)">
+                                <span class="delete-icon">✕</span>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="product-cell">
+                            <div class="product-info">
+                                <div class="product-image">
+                                    <img src="images/products/earring.jpg" alt="Rose Gold Earring" />
+                                </div>
+                                <span class="product-name">Rose Gold Earring</span>
+                            </div>
+                        </td>
+                        <td class="price-cell">$80</td>
+                        <td class="quantity-cell">
+                            <div class="quantity-selector">
+                                <button class="qty-btn" @onclick="() => DecreaseQuantity(1)">-</button>
+                                <input type="text" readonly value="@cartItems[1].Quantity" />
+                                <button class="qty-btn" @onclick="() => IncreaseQuantity(1)">+</button>
+                            </div>
+                        </td>
+                        <td class="total-cell">$@(80 * cartItems[1].Quantity)</td>
+                        <td class="action-cell">
+                            <button class="remove-btn" aria-label="Remove item" @onclick="() => RemoveItem(1)">
+                                <span class="delete-icon">✕</span>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="product-cell">
+                            <div class="product-info">
+                                <div class="product-image">
+                                    <img src="images/products/apple.jpg" alt="Apple" />
+                                </div>
+                                <span class="product-name">Apple</span>
+                            </div>
+                        </td>
+                        <td class="price-cell">$12</td>
+                        <td class="quantity-cell">
+                            <div class="quantity-selector">
+                                <button class="qty-btn" @onclick="() => DecreaseQuantity(2)">-</button>
+                                <input type="text" readonly value="@cartItems[2].Quantity" />
+                                <button class="qty-btn" @onclick="() => IncreaseQuantity(2)">+</button>
+                            </div>
+                        </td>
+                        <td class="total-cell">$@(12 * cartItems[2].Quantity)</td>
+                        <td class="action-cell">
+                            <button class="remove-btn" aria-label="Remove item" @onclick="() => RemoveItem(2)">
+                                <span class="delete-icon">✕</span>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="cart-actions">
+                <a href="/products" class="continue-shopping">Continue Shopping</a>
+
+                <a href="/checkout" class="btn-shop-now checkout-btn">
+                    Checkout
+                    <span class="icon-arrow"></span>
+                </a>
+            </div>
+        </div>
+
+        <div class="cart-summary">
+            <h3 class="summary-title">Summary</h3>
+            <div class="shipping-estimate">
+                <h4 class="shipping-title">Estimate Shipping</h4>
+                <div class="shipping-form">
+                    <p class="shipping-text">Enter your destination to get a shipping estimate</p>
+
+                    <div class="form-group">
+                        <label>Country *</label>
+                        <div class="pure-dropdown">
+                            <div class="dropdown-header" @onclick="ToggleCountryDropdown">
+                                <span>@(string.IsNullOrEmpty(SelectedCountry) ? "Select Country" : Countries.FirstOrDefault(c => c.Code == SelectedCountry)?.Name)</span>
+                                <i class="dropdown-arrow"></i>
+                            </div>
+                            <div class="dropdown-list-container @(IsCountryDropdownOpen ? "open" : "")">
+                                <ul class="dropdown-list">
+                                    @foreach (var country in Countries)
+                                    {
+                                        <li class="dropdown-item @(country.Code == SelectedCountry ? "selected" : "")" 
+                                            @onclick="() => SelectCountry(country.Code)">
+                                            <span>@country.Name</span>
+                                            @if (country.Code == SelectedCountry)
+                                            {
+                                                <span class="checkmark">✓</span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>State/Province</label>
+                        <div class="pure-dropdown">
+                            <div class="dropdown-header" @onclick="ToggleStateDropdown">
+                                <span>@(string.IsNullOrEmpty(SelectedState) ? "Select State" : StatesForSelectedCountry.FirstOrDefault(s => s.Code == SelectedState)?.Name)</span>
+                                <i class="dropdown-arrow"></i>
+                            </div>
+                            <div class="dropdown-list-container @(IsStateDropdownOpen ? "open" : "")">
+                                <ul class="dropdown-list">
+                                    @if (StatesForSelectedCountry.Any())
+                                    {
+                                        @foreach (var state in StatesForSelectedCountry)
+                                        {
+                                            <li class="dropdown-item @(state.Code == SelectedState ? "selected" : "")" 
+                                                @onclick="() => SelectState(state.Code)">
+                                                <span>@state.Name</span>
+                                                @if (state.Code == SelectedState)
+                                                {
+                                                    <span class="checkmark">✓</span>
+                                                }
+                                            </li>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <li class="dropdown-item disabled">Please select a country first</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Zip/Postal Code</label>
+                        <input type="text" placeholder="Zip/Postal Code" class="postal-input" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-details">
+                <div class="summary-row">
+                    <span>Sub-Total</span>
+                    <span class="amount">$@SubTotal.ToString("F2")</span>
+                </div>
+                <div class="summary-row">
+                    <span>Delivery Charges</span>
+                    <span class="amount">$@DeliveryCharges.ToString("F2")</span>
+                </div>
+                <div class="summary-row">
+                    <span>Coupon Discount</span>
+                    <a href="#" class="apply-discount" @onclick="ToggleCouponInput" @onclick:preventDefault>Apply Discount</a>
+                </div>
+
+                @if (ShowCouponInput)
+                {
+                    <div class="coupon-section">
+                        <div class="coupon-form">
+                            <input type="text" placeholder="Enter coupon code" @bind="CouponCode" />
+                            <button class="apply-coupon-btn" @onclick="ApplyCoupon">Apply</button>
+                        </div>
+                    </div>
+                }
+
+                <div class="total-row">
+                    <span class="total-text">Total Amount</span>
+                    <span class="total-amount">$@TotalAmount.ToString("F2")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Updated Products section to match deal-of-day-section -->
+    <section class="products-section" style="padding: 60px 0;background-color: var(--white);">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="section-title text-center mb-4">
+                        <h2 class="section-heading">New <span style="color: #5CAF90 !important;">Arrivals</span></h2>
+                        <p class="section-tagline">Browse The Collection of Top Products</p>
+
+                    </div>
+
+                    <div class="products-slider-controls">
+                        <button class="slider-prev"><i class="fa fa-arrow-left"></i></button>
+                        <button class="slider-next"><i class="fa fa-arrow-right"></i></button>
+                    </div>
+
+                    <div class="products-row">
+                        <!-- Product 1 -->
+                        <div class="product-card">
+                            <div class="product-badge badge-sale">Sale</div>
+                            <div class="product-thumb">
+                                <img src="images/products/nuts.jpg" alt="Mixed Nuts Berries Pack">
+                                <div class="product-actions">
+                                    <button class="action-btn quick-view" title="Quick View"><i
+                                            class="fa fa-eye"></i></button>
+                                    <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                            class="fa fa-heart"></i></button>
+                                    <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                            class="fa fa-shopping-cart"></i></button>
+                                </div>
+                            </div>
+                            <div class="product-info1">
+                                <a href="#" class="product-category">Dried Fruits</a>
+                                <h5 class="product-title">
+                                    <a href="#">Mixed Nuts Berries Pack</a>
+                                </h5>
+                                <div class="product-rating">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star-o"></i>
+                                    <span class="rating-count">(4)</span>
+                                </div>
+                                <div class="product-price">
+                                    <span class="old-price">$56.00</span>
+                                    <span class="current-price">$45.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product 2 -->
+                        <div class="product-card">
+                            <div class="product-badge badge-sale">Sale</div>
+                            <div class="product-thumb">
+                                <img src="images/products/cookies.jpg" alt="Multi Grain Combo Cookies">
+                                <div class="product-actions">
+                                    <button class="action-btn quick-view" title="Quick View"><i
+                                            class="fa fa-eye"></i></button>
+                                    <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                            class="fa fa-heart"></i></button>
+                                    <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                            class="fa fa-shopping-cart"></i></button>
+                                </div>
+                            </div>
+                            <div class="product-info1">
+                                <a href="#" class="product-category">Cookies</a>
+                                <h5 class="product-title">
+                                    <a href="#">Multi Grain Combo Cookies</a>
+                                </h5>
+                                <div class="product-rating">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star-o"></i>
+                                    <i class="fa fa-star-o"></i>
+                                    <span class="rating-count">(3)</span>
+                                </div>
+                                <div class="product-price">
+                                    <span class="old-price">$30.00</span>
+                                    <span class="current-price">$25.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product 3 -->
+                        <div class="product-card">
+                            <div class="product-thumb">
+                                <img src="images/products/juice.jpg" alt="Fresh Mango juice pack">
+                                <div class="product-actions">
+                                    <button class="action-btn quick-view" title="Quick View"><i
+                                            class="fa fa-eye"></i></button>
+                                    <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                            class="fa fa-heart"></i></button>
+                                    <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                            class="fa fa-shopping-cart"></i></button>
+                                </div>
+                            </div>
+                            <div class="product-info1">
+                                <a href="#" class="product-category">Foods</a>
+                                <h5 class="product-title">
+                                    <a href="#">Fresh Mango juice pack</a>
+                                </h5>
+                                <div class="product-rating">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <span class="rating-count">(5)</span>
+                                </div>
+                                <div class="product-price">
+                                    <span class="old-price">$65.00</span>
+                                    <span class="current-price">$46.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product 4 -->
+                        <div class="product-card">
+                            <div class="product-badge badge-sale">Sale</div>
+                            <div class="product-thumb">
+                                <img src="images/products/dates.jpg" alt="Dates Value Fresh Pouch">
+                                <div class="product-actions">
+                                    <button class="action-btn quick-view" title="Quick View"><i
+                                            class="fa fa-eye"></i></button>
+                                    <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                            class="fa fa-heart"></i></button>
+                                    <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                            class="fa fa-shopping-cart"></i></button>
+                                </div>
+                            </div>
+                            <div class="product-info1">
+                                <a href="#" class="product-category">Dried Fruits</a>
+                                <h5 class="product-title">
+                                    <a href="#">Dates Value Fresh Pouch</a>
+                                </h5>
+                                <div class="product-rating">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star-o"></i>
+                                    <span class="rating-count">(4)</span>
+                                </div>
+                                <div class="product-price">
+                                    <span class="old-price">$85.00</span>
+                                    <span class="current-price">$78.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product 5 -->
+                        <div class="product-card">
+                            <div class="product-badge badge-new">New</div>
+                            <div class="product-thumb">
+                                <img src="images/products/fiber.jpg" alt="Stick Fiber Masala Magic">
+                                <div class="product-actions">
+                                    <button class="action-btn quick-view" title="Quick View"><i
+                                            class="fa fa-eye"></i></button>
+                                    <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                            class="fa fa-heart"></i></button>
+                                    <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                            class="fa fa-shopping-cart"></i></button>
+                                </div>
+                            </div>
+                            <div class="product-info1">
+                                <a href="#" class="product-category">Foods</a>
+                                <h5 class="product-title">
+                                    <a href="#">Stick Fiber Masala Magic</a>
+                                </h5>
+                                <div class="product-rating">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <span class="rating-count">(5)</span>
+                                </div>
+                                <div class="product-price">
+                                    <span class="old-price">$50.00</span>
+                                    <span class="current-price">$45.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script src="js/cart.js"></script>
+
+@code {
+    private class CartItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string ImageUrl { get; set; }
+        public decimal Price { get; set; }
+        public int Quantity { get; set; } = 1;
+    }
+
+    private List<CartItem> cartItems = new List<CartItem>
+    {
+        new CartItem { Id = 1, Name = "Women's wallet Hand Purse", ImageUrl = "images/products/wallet.jpg", Price = 70, Quantity = 1 },
+        new CartItem { Id = 2, Name = "Rose Gold Earring", ImageUrl = "images/products/earring.jpg", Price = 80, Quantity = 1 },
+        new CartItem { Id = 3, Name = "Apple", ImageUrl = "images/products/apple.jpg", Price = 12, Quantity = 1 }
+    };
+
+    private decimal SubTotal => cartItems.Sum(item => item.Price * item.Quantity);
+    private decimal DeliveryCharges => Math.Round(SubTotal * 0.2m, 2);
+    private decimal TotalAmount => SubTotal + DeliveryCharges - DiscountAmount;
+
+    private void IncreaseQuantity(int index)
+    {
+        if (index >= 0 && index < cartItems.Count)
+        {
+            cartItems[index].Quantity++;
+            StateHasChanged();
+        }
+    }
+
+    private void DecreaseQuantity(int index)
+    {
+        if (index >= 0 && index < cartItems.Count && cartItems[index].Quantity > 1)
+        {
+            cartItems[index].Quantity--;
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveItem(int index)
+    {
+        if (index >= 0 && index < cartItems.Count)
+        {
+            cartItems.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private string SelectedCountry { get; set; } = "";
+    private string SelectedState { get; set; } = "";
+
+    private bool IsCountryDropdownOpen { get; set; } = false;
+    private bool IsStateDropdownOpen { get; set; } = false;
+
+    private void ToggleCountryDropdown()
+    {
+        IsCountryDropdownOpen = !IsCountryDropdownOpen;
+        if (IsCountryDropdownOpen)
+            IsStateDropdownOpen = false;
+    }
+
+    private void ToggleStateDropdown()
+    {
+        IsStateDropdownOpen = !IsStateDropdownOpen;
+        if (IsStateDropdownOpen)
+            IsCountryDropdownOpen = false;
+    }
+
+    private void SelectCountry(string countryCode)
+    {
+        SelectedCountry = countryCode;
+        SelectedState = ""; // Reset state when country changes
+        IsCountryDropdownOpen = false;
+    }
+
+    private void SelectState(string stateCode)
+    {
+        SelectedState = stateCode;
+        IsStateDropdownOpen = false;
+    }
+
+    private class Region
+    {
+        public string Code { get; set; }
+        public string Name { get; set; }
+    }
+
+    private List<Region> Countries = new List<Region>
+    {
+        new Region { Code = "us", Name = "United States" },
+        new Region { Code = "ca", Name = "Canada" },
+        new Region { Code = "uk", Name = "United Kingdom" },
+        new Region { Code = "au", Name = "Australia" },
+        new Region { Code = "de", Name = "Germany" },
+        new Region { Code = "fr", Name = "France" }
+    };
+
+    private Dictionary<string, List<Region>> StatesByCountry = new Dictionary<string, List<Region>>
+    {
+        ["us"] = new List<Region>
+        {
+            new Region { Code = "ca", Name = "California" },
+            new Region { Code = "ny", Name = "New York" },
+            new Region { Code = "tx", Name = "Texas" },
+            new Region { Code = "fl", Name = "Florida" }
+        },
+        ["ca"] = new List<Region>
+        {
+            new Region { Code = "on", Name = "Ontario" },
+            new Region { Code = "qc", Name = "Quebec" },
+            new Region { Code = "bc", Name = "British Columbia" }
+        },
+        ["uk"] = new List<Region>
+        {
+            new Region { Code = "eng", Name = "England" },
+            new Region { Code = "sco", Name = "Scotland" },
+            new Region { Code = "wal", Name = "Wales" }
+        }
+    };
+
+    private List<Region> StatesForSelectedCountry => 
+        string.IsNullOrEmpty(SelectedCountry) || !StatesByCountry.ContainsKey(SelectedCountry) 
+            ? new List<Region>() 
+            : StatesByCountry[SelectedCountry];
+
+    protected override void OnParametersSet()
+    {
+        if (StatesForSelectedCountry.All(s => s.Code != SelectedState))
+        {
+            SelectedState = "";
+        }
+        
+        base.OnParametersSet();
+    }
+
+    private bool ShowCouponInput { get; set; } = false;
+    private string CouponCode { get; set; } = "";
+    private decimal DiscountAmount { get; set; } = 0;
+
+    private void ToggleCouponInput()
+    {
+        ShowCouponInput = !ShowCouponInput;
+    }
+
+    private void ApplyCoupon()
+    {
+        if (!string.IsNullOrWhiteSpace(CouponCode))
+        {
+            // Simple implementation - in a real app this would validate against a database
+            if (CouponCode.ToUpper() == "DISCOUNT10")
+            {
+                DiscountAmount = 10.0m;
+            }
+            else if (CouponCode.ToUpper() == "SAVE20")
+            {
+                DiscountAmount = 20.0m;
+            }
+
+            // Hide the input field after applying coupon
+            ShowCouponInput = false;
+        }
+    }
+}

@@ -1,0 +1,351 @@
+@page "/wishlist"
+
+<PageTitle>Wishlist</PageTitle>
+
+<link href="css/wishlist.css" rel="stylesheet" />
+
+<div class="wishlist-container">
+    <div class="border-container">
+        <div class="breadcrumb">
+            <div class="container">
+                <a href="/">Home</a> / <span>Wishlist</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="wishlist-section">
+        <div class="container">
+            <h2 class="section-title">My Wishlist</h2>
+            
+            @if (wishlistItems.Count > 0)
+            {
+                <div class="wishlist-actions">
+                    <span class="wishlist-count">@wishlistItems.Count items in wishlist</span>
+                    <button class="clear-wishlist" @onclick="ClearWishlist">Clear Wishlist</button>
+                </div>
+                
+                <div class="wishlist-items">
+                    <table class="wishlist-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Stock Status</th>
+                                <th>Actions</th>
+                                <th>Remove</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in wishlistItems)
+                            {
+                                <tr>
+                                    <td class="product-cell">
+                                        <div class="product-info">
+                                            <div class="product-image">
+                                                <img src="@item.ImageUrl" alt="@item.Name" />
+                                            </div>
+                                            <div class="product-details">
+                                                <a href="/product/@item.Id" class="product-name">@item.Name</a>
+                                                <div class="product-rating">
+                                                    @for (int i = 0; i < 5; i++)
+                                                    {
+                                                        if (i < item.Rating)
+                                                        {
+                                                            <i class="fa fa-star"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="fa fa-star-o"></i>
+                                                        }
+                                                    }
+                                                    <span class="rating-count">(@item.RatingCount)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="price-cell">
+                                        @if (item.OldPrice > 0)
+                                        {
+                                            <span class="old-price">$@item.OldPrice.ToString("F2")</span>
+                                        }
+                                        <span class="current-price">$@item.CurrentPrice.ToString("F2")</span>
+                                    </td>
+                                    <td class="stock-cell">
+                                        @if (item.InStock)
+                                        {
+                                            <span class="in-stock">In Stock</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="out-of-stock">Out of Stock</span>
+                                        }
+                                    </td>
+                                    <td class="actions-cell">
+                                        <button class="action-btn add-to-cart" @onclick="() => AddToCart(item)" disabled="@(!item.InStock)">
+                                            <i class="fa fa-shopping-cart"></i> Add to Cart
+                                        </button>
+                                    </td>
+                                    <td class="remove-cell">
+                                        <button class="remove-btn" @onclick="() => RemoveFromWishlist(item.Id)">
+                                            <span class="delete-icon">✕</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="wishlist-share">
+                    <h3>Share Your Wishlist</h3>
+                    <p>Share your wishlist with friends and family</p>
+                    <div class="social-share">
+                        <a href="#" class="social-icon facebook">
+                            <i class="fa fa-facebook"></i>
+                        </a>
+                        <a href="#" class="social-icon twitter">
+                            <i class="fa fa-twitter"></i>
+                        </a>
+                        <a href="#" class="social-icon pinterest">
+                            <i class="fa fa-pinterest"></i>
+                        </a>
+                        <a href="#" class="social-icon email">
+                            <i class="fa fa-envelope"></i>
+                        </a>
+                        <a href="#" class="social-icon whatsapp">
+                            <i class="fa fa-whatsapp"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="form-group custom-checkbox save-wishlist-checkbox">
+                    <input type="checkbox" id="saveWishlist" />
+                    <label for="saveWishlist">
+                        <span class="checkbox-icon"></span>
+                        Save this address for future orders
+                    </label>
+                </div>
+            }
+            else
+            {
+                <div class="empty-wishlist">
+                    <div class="empty-icon">
+                        <i class="fa fa-heart-o"></i>
+                    </div>
+                    <h3>Your wishlist is empty</h3>
+                    <p>Add items you love to your wishlist. Review them anytime and easily move them to the cart.</p>
+                    <a href="/products" class="continue-shopping">Continue Shopping</a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Related Products section -->
+    <section class="related-products">
+        <div class="container">
+            <h2 class="section-title">You May Also Like</h2>
+            <div class="products-row">
+                @foreach (var product in relatedProducts)
+                {
+                    <div class="product-card">
+                        @if (product.IsNew)
+                        {
+                            <div class="product-badge badge-new">New</div>
+                        }
+                        @if (product.OnSale)
+                        {
+                            <div class="product-badge badge-sale">Sale</div>
+                        }
+                        <div class="product-thumb">
+                            <img src="@product.ImageUrl" alt="@product.Name">
+                            <div class="product-actions">
+                                <button class="action-btn quick-view" title="Quick View">
+                                    <i class="fa fa-eye"></i>
+                                </button>
+                                <button class="action-btn add-to-wishlist" title="Add to Wishlist">
+                                    <i class="fa fa-heart"></i>
+                                </button>
+                                <button class="action-btn add-to-cart" title="Add to Cart">
+                                    <i class="fa fa-shopping-cart"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="product-info1">
+                            <a href="#" class="product-category">@product.Category</a>
+                            <h5 class="product-title">
+                                <a href="/product/@product.Id">@product.Name</a>
+                            </h5>
+                            <div class="product-rating">
+                                @for (int i = 0; i < 5; i++)
+                                {
+                                    if (i < product.Rating)
+                                    {
+                                        <i class="fa fa-star"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa fa-star-o"></i>
+                                    }
+                                }
+                                <span class="rating-count">(@product.RatingCount)</span>
+                            </div>
+                            <div class="product-price">
+                                @if (product.OldPrice > 0)
+                                {
+                                    <span class="old-price">$@product.OldPrice.ToString("F2")</span>
+                                }
+                                <span class="current-price">$@product.CurrentPrice.ToString("F2")</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private class WishlistItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string ImageUrl { get; set; }
+        public decimal CurrentPrice { get; set; }
+        public decimal OldPrice { get; set; }
+        public bool InStock { get; set; }
+        public int Rating { get; set; }
+        public int RatingCount { get; set; }
+    }
+
+    private class RelatedProduct
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Category { get; set; }
+        public string ImageUrl { get; set; }
+        public decimal CurrentPrice { get; set; }
+        public decimal OldPrice { get; set; }
+        public int Rating { get; set; }
+        public int RatingCount { get; set; }
+        public bool IsNew { get; set; }
+        public bool OnSale { get; set; }
+    }
+
+    private List<WishlistItem> wishlistItems = new List<WishlistItem>
+    {
+        new WishlistItem 
+        { 
+            Id = 1, 
+            Name = "Women's wallet Hand Purse", 
+            ImageUrl = "images/products/wallet.jpg", 
+            CurrentPrice = 70.00m, 
+            OldPrice = 85.00m, 
+            InStock = true, 
+            Rating = 4, 
+            RatingCount = 12 
+        },
+        new WishlistItem 
+        { 
+            Id = 2, 
+            Name = "Rose Gold Earring", 
+            ImageUrl = "images/products/earring.jpg",
+            CurrentPrice = 80.00m, 
+            OldPrice = 95.00m, 
+            InStock = true, 
+            Rating = 5, 
+            RatingCount = 8 
+        },
+        new WishlistItem 
+        { 
+            Id = 3, 
+            Name = "Mixed Nuts Berries Pack", 
+            ImageUrl = "images/products/nuts.jpg", 
+            CurrentPrice = 45.00m, 
+            OldPrice = 56.00m, 
+            InStock = false, 
+            Rating = 4, 
+            RatingCount = 4 
+        }
+    };
+
+    private List<RelatedProduct> relatedProducts = new List<RelatedProduct>
+    {
+        new RelatedProduct 
+        { 
+            Id = 4, 
+            Name = "Multi Grain Combo Cookies", 
+            Category = "Cookies", 
+            ImageUrl = "images/products/cookies.jpg", 
+            CurrentPrice = 25.00m, 
+            OldPrice = 30.00m, 
+            Rating = 3, 
+            RatingCount = 3,
+            IsNew = false,
+            OnSale = true
+        },
+        new RelatedProduct 
+        { 
+            Id = 5, 
+            Name = "Fresh Mango juice pack", 
+            Category = "Foods", 
+            ImageUrl = "images/products/juice.jpg", 
+            CurrentPrice = 46.00m, 
+            OldPrice = 65.00m, 
+            Rating = 5, 
+            RatingCount = 5,
+            IsNew = false,
+            OnSale = false
+        },
+        new RelatedProduct 
+        { 
+            Id = 6, 
+            Name = "Dates Value Fresh Pouch", 
+            Category = "Dried Fruits", 
+            ImageUrl = "images/products/dates.jpg", 
+            CurrentPrice = 78.00m, 
+            OldPrice = 85.00m, 
+            Rating = 4, 
+            RatingCount = 4,
+            IsNew = false,
+            OnSale = true
+        },
+        new RelatedProduct 
+        { 
+            Id = 7, 
+            Name = "Stick Fiber Masala Magic", 
+            Category = "Foods", 
+            ImageUrl = "images/products/fiber.jpg", 
+            CurrentPrice = 45.00m, 
+            OldPrice = 50.00m, 
+            Rating = 5, 
+            RatingCount = 5,
+            IsNew = true,
+            OnSale = false
+        }
+    };
+
+    private void RemoveFromWishlist(int itemId)
+    {
+        var item = wishlistItems.FirstOrDefault(i => i.Id == itemId);
+        if (item != null)
+        {
+            wishlistItems.Remove(item);
+            StateHasChanged();
+        }
+    }
+
+    private void ClearWishlist()
+    {
+        wishlistItems.Clear();
+        StateHasChanged();
+    }
+
+    private void AddToCart(WishlistItem item)
+    {
+        // In a real app, add to cart logic would go here
+        Console.WriteLine($"Added {item.Name} to cart");
+        
+        // Optionally remove from wishlist after adding to cart
+        // RemoveFromWishlist(item.Id);
+    }
+}

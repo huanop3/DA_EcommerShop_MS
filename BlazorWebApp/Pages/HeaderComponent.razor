@@ -1,0 +1,395 @@
+@inject LoginService LoginService
+@using System.Security.Claims
+@using System.Text.Json
+
+<link rel="stylesheet" href="css/site.css" />
+
+
+<header class="@(_mobileMenuOpen ? "mobile-menu-is-active" : "")"> 
+    
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="container1">
+            <div class="topbar-left">
+                <a href="tel:+919876543210" class="contact-item">
+                    <i class="phone-icon"></i>
+                    <span>+91 987 654 3210</span>
+                </a>
+                <a href="tel:+919876543210" class="contact-item">
+                    <i class="phone-icon"></i>
+                    <span>+91 987 654 3210</span>
+                </a>
+            </div>
+            <div class="topbar-center">
+                <span>World's Fastest Online Shopping Destination</span>
+            </div>
+            <div class="topbar-right">
+                <a href="#">Help?</a>
+                <a href="#">Track Order?</a>
+                <div class="dropdown">
+                    <button>English <i class="arrow-down"></i></button>
+                </div>
+                <div class="dropdown">
+                    
+                    <button>Dollar <i class="arrow-down"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <div class="main-header">
+        <div class="container1">
+            <button class="mobile-menu-toggle @(_mobileMenuOpen ? "active" : "")" @onclick="ToggleMobileMenu">
+                <span class="mobile-menu-icon"></span>
+            </button>
+            
+            <a href="/" class="logo">
+                <img src="/images/header/logo.png" alt="Grabit">
+            </a>
+            
+            <div class="search-bar">
+                <input type="text" placeholder="Search Products..." />
+                <button type="submit">
+                    <i class="search-icon"></i>
+                </button>
+            </div>
+            
+            <div class="header-actions">
+                @if (IsAuthenticated)
+                {
+                    <div class="action-item user-dropdown" @onclick="ToggleUserMenu" style="text-decoration: none; cursor: pointer;">
+                        <div class="action-content">
+                            <span>Hello,</span>
+                            <strong>@UserName</strong>
+                        </div>
+                        <i class="user-icon"></i>
+                        
+                        <div class="user-menu @(isUserMenuOpen ? "active" : "")">
+                            <a href="/profile">My Profile</a>
+                            <a href="/orders">My Orders</a>
+                            <a href="/addresses">My Addresses</a>
+                            <a href="javascript:void(0)" @onclick="Logout">Logout</a>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <a href="/login" class="action-item" style="text-decoration: none;">
+                        <div class="action-content">
+                            <span>Account</span>
+                            <strong>LOGIN</strong>
+                        </div>
+                        <i class="user-icon"></i>
+                    </a>
+                }
+                
+                <a href="/wishlist" class="action-item" style="text-decoration: none;">
+                    <div class="action-content">
+                        <span>Wishlist</span>
+                        <strong>ITEMS</strong>
+                    </div>
+                    <div class="icon-container">
+                        <i class="heart-icon"></i>
+                        <span class="notification-badge">3</span>
+                    </div>
+                </a>
+                
+                <a href="/cart" class="action-item" style="text-decoration: none;">
+                    <div class="action-content">
+                        <span>Cart</span>
+                        <strong>ITEMS</strong>
+                    </div>
+                    <div class="icon-container">
+                        <i class="cart-icon"></i>
+                        <span class="notification-badge">3</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation -->
+    <div class="main-nav">
+        <div class="container1">
+            <div class="category-dropdown">
+                <button>
+                    <i class="menu-icon"></i> 
+                    <span>All Categories</span>
+                    <i class="arrow-down"></i>
+                </button>
+                
+                @* Replace Category Submenu Content with Simple List *@
+                <div class="category-submenu">
+                    @* Use a simple list structure like the image *@
+                    <ul class="category-submenu-list">
+                        <li class="category-submenu-list-item">
+                            <a href="/laptop">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-laptop"></i> 
+                                <span>Máy tính xách tay</span>
+                            </a>
+                        </li>
+                        <li class="category-submenu-list-item">
+                            <a href="/gaming-laptop">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-gaming"></i> 
+                                <span>Laptop Gaming - Đồ Họa</span>
+                            </a>
+                        </li>
+                        <li class="category-submenu-list-item">
+                            <a href="/office-laptop">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-office"></i> 
+                                <span>Laptop Văn phòng</span>
+                            </a>
+                        </li>
+                         <li class="category-submenu-list-item">
+                            <a href="/coding-laptop">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-coding"></i> 
+                                <span>Laptop Lập trình</span>
+                            </a>
+                        </li>
+                         <li class="category-submenu-list-item">
+                            <a href="/premium-laptop">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-premium"></i> 
+                                <span>Laptop cao cấp</span>
+                            </a>
+                        </li>
+                         <li class="category-submenu-list-item">
+                            <a href="/macbook">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-macbook"></i> 
+                                <span>Apple Macbook</span>
+                            </a>
+                        </li>
+                         <li class="category-submenu-list-item">
+                            <a href="/ram-ssd">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-ram-ssd"></i> 
+                                <span>RAM - SSD</span>
+                            </a>
+                        </li>
+                         <li class="category-submenu-list-item">
+                            <a href="/accessories">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-accessories"></i> 
+                                <span>Kho phụ kiện</span>
+                            </a>
+                        </li>
+                         <li class="category-submenu-list-item">
+                            <a href="/adapters">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-adapter"></i> 
+                                <span>Cổng chuyển</span>
+                            </a>
+                        </li>
+                         <li class="category-submenu-list-item">
+                            <a href="/cooling">
+                                @* Change img to i tag with specific class *@
+                                <i class="category-icon1 category-icon-cooling"></i> 
+                                <span>Tản nhiệt laptop</span>
+                            </a>
+                        </li>
+                        @* Add other category items similarly *@
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="nav-links">
+                @* Wrap each item that needs a dropdown *@
+                <div class="nav-item-wrapper">
+                    <a href="#" class="nav-item">Home <i class="arrow-down"></i></a>
+                    <div class="nav-submenu">
+                        <a href="/home1" class="nav-submenu-item">Home 1</a>
+                        <a href="/home2" class="nav-submenu-item">Home 2</a>
+                        <a href="/home3" class="nav-submenu-item">Home 3</a>
+                    </div>
+                </div>
+                <div class="nav-item-wrapper">
+                    <a href="#" class="nav-item">Categories <i class="arrow-down"></i></a>
+                    <div class="nav-submenu">
+                        <a href="/cat/fruits" class="nav-submenu-item">Fruits</a>
+                        <a href="/cat/vegetables" class="nav-submenu-item">Vegetables</a>
+                        <a href="/cat/meat" class="nav-submenu-item">Meat & Poultry</a>
+                        <a href="/cat/dairy" class="nav-submenu-item">Dairy & Eggs</a>
+                    </div>
+                </div>
+                <div class="nav-item-wrapper">
+                    <a href="#" class="nav-item">Products <i class="arrow-down"></i></a>
+                     <div class="nav-submenu">
+                        <a href="/prod/featured" class="nav-submenu-item">Featured</a>
+                        <a href="/prod/new" class="nav-submenu-item">New Arrivals</a>
+                        <a href="/prod/sale" class="nav-submenu-item">On Sale</a>
+                    </div>
+                </div>
+                <div class="nav-item-wrapper">
+                    <a href="#" class="nav-item">Blog <i class="arrow-down"></i></a>
+                     <div class="nav-submenu">
+                        <a href="/blog/grid" class="nav-submenu-item">Blog Grid</a>
+                        <a href="/blog/list" class="nav-submenu-item">Blog List</a>
+                    </div>
+                </div>
+                <div class="nav-item-wrapper">
+                    <a href="#" class="nav-item">Pages <i class="arrow-down"></i></a>
+                     <div class="nav-submenu">
+                        <a href="/about" class="nav-submenu-item">About Us</a>
+                        <a href="/contact" class="nav-submenu-item">Contact</a>
+                        <a href="/faq" class="nav-submenu-item">FAQ</a>
+                    </div>
+                </div>
+                <a href="#" class="nav-item offers"><i class="offer-icon"></i> Offers</a>
+            </div>
+            
+            <div class="location-dropdown">
+                <button>
+                    <i class="location-icon"></i>
+                    <span>New York</span>
+                    <i class="arrow-down"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu @(_mobileMenuOpen ? "active" : "")">
+        <div class="mobile-menu-header">
+            <a href="/" class="logo">
+                <img src="/images/header/logo.png" alt="Grabit">
+            </a>
+            <button class="mobile-menu-close" @onclick="ToggleMobileMenu">×</button>
+        </div>
+        
+        <div class="mobile-nav-links">
+            <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("home"))">
+                Home
+                <i class="arrow-down"></i>
+            </a>
+            <div class="mobile-submenu @(_openSubmenu == "home" ? "active" : "")">
+                <a href="#" class="mobile-nav-item">Home 1</a>
+                <a href="#" class="mobile-nav-item">Home 2</a>
+            </div>
+            
+            <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("categories"))">
+                Categories
+                <i class="arrow-down"></i>
+            </a>
+            <div class="mobile-submenu @(_openSubmenu == "categories" ? "active" : "")">
+                <a href="#" class="mobile-nav-item">Fruits</a>
+                <a href="#" class="mobile-nav-item">Vegetables</a>
+                <a href="#" class="mobile-nav-item">Meat</a>
+            </div>
+            
+            <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("products"))">
+                Products
+                <i class="arrow-down"></i>
+            </a>
+            <div class="mobile-submenu @(_openSubmenu == "products" ? "active" : "")">
+                <a href="#" class="mobile-nav-item">Featured</a>
+                <a href="#" class="mobile-nav-item">New Arrivals</a>
+                <a href="#" class="mobile-nav-item">Best Sellers</a>
+            </div>
+            
+            <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("blog"))">
+                Blog
+                <i class="arrow-down"></i>
+            </a>
+            <div class="mobile-submenu @(_openSubmenu == "blog" ? "active" : "")">
+                <a href="#" class="mobile-nav-item">Blog Grid</a>
+                <a href="#" class="mobile-nav-item">Blog List</a>
+                <a href="#" class="mobile-nav-item">Blog Details</a>
+            </div>
+            
+            <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("pages"))">
+                Pages
+                <i class="arrow-down"></i>
+            </a>
+            <div class="mobile-submenu @(_openSubmenu == "pages" ? "active" : "")">
+                <a href="#" class="mobile-nav-item">About Us</a>
+                <a href="#" class="mobile-nav-item">Contact</a>
+                <a href="#" class="mobile-nav-item">FAQ</a>
+            </div>
+            
+            <a href="#" class="mobile-nav-item offers">
+                <i class="offer-icon"></i> Offers
+            </a>
+        </div>
+    </div>
+
+    <!-- Add Overlay Div -->
+    <div class="mobile-menu-overlay @(_mobileMenuOpen ? "active" : "")" @onclick="ToggleMobileMenu"></div>
+
+</header>
+
+
+@code {
+    private bool _mobileMenuOpen = false;
+    private string _openSubmenu = string.Empty;
+    private bool IsAuthenticated { get; set; } = false;
+    private string UserName { get; set; } = string.Empty;
+    private bool isUserMenuOpen { get; set; } = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await CheckAuthenticationStatus();
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CheckAuthenticationStatus()
+    {
+        try
+        {
+            IsAuthenticated = await LoginService.CheckAuthenticationStatus();
+            
+            if (IsAuthenticated)
+            {
+                UserName = await LoginService.GetUserName();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Lỗi xác thực: {ex.Message}");
+            IsAuthenticated = false;
+        }
+    }
+    
+    private void ToggleUserMenu()
+    {
+        isUserMenuOpen = !isUserMenuOpen;
+    }
+    
+    private async Task Logout()
+    {
+        await LoginService.Logout();
+        IsAuthenticated = false;
+        UserName = string.Empty;
+    }
+    
+    private void ToggleMobileMenu() 
+    {
+        _mobileMenuOpen = !_mobileMenuOpen;
+        
+        if (!_mobileMenuOpen)
+        {
+             _openSubmenu = string.Empty;
+        }
+    }
+    
+    private void ToggleSubmenu(string submenu)
+    {
+        if (_openSubmenu == submenu)
+        {
+            _openSubmenu = string.Empty;
+        }
+        else
+        {
+            _openSubmenu = submenu;
+        }
+    }
+}

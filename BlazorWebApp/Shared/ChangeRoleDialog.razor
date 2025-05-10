@@ -1,0 +1,91 @@
+@using MudBlazor
+@using MudBlazor.Utilities
+@using MudBlazor.Services
+@using DA_Ecommershop.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-width: 500px; padding: 20px;">
+            <MudText Class="mb-4">
+                Change role for user <strong>@User?.FullName</strong>
+            </MudText>
+            
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Current Role</MudText>
+                    <MudChip T="string" Color="@GetRoleColor(User?.Role)" Size="Size.Medium">
+                        @User?.Role
+                    </MudChip>
+                </MudItem>
+                
+                <MudItem xs="12" Class="mt-3">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Select New Role</MudText>
+                    <MudSelect T="string" @bind-Value="selectedRole" Label="New Role" Required="true">
+                        @foreach (var role in AvailableRoles.Where(r => r.Name != User?.Role))
+                        {
+                            <MudSelectItem Value="@role.Name">
+                                <div class="d-flex align-center">
+                                    <MudAvatar Color="@GetRoleColor(role.Name)" Size="Size.Small" Class="mr-2">
+                                        @role.Name[0]
+                                    </MudAvatar>
+                                    <MudText>@role.Name</MudText>
+                                </div>
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="12" Class="mt-4">
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Filled">
+                        Changing a user's role will modify their permissions in the system.
+                    </MudAlert>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" 
+                  Disabled="@(string.IsNullOrEmpty(selectedRole) || selectedRole == User?.Role)">
+            Change Role
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IDialogReference MudDialog { get; set; }
+    [Parameter] public UserModel User { get; set; }
+    [Parameter] public List<RoleModel> AvailableRoles { get; set; } = new List<RoleModel>();
+    
+    private string selectedRole = "";
+
+    protected override void OnInitialized()
+    {
+        // Đặt giá trị mặc định cho selectedRole khác với vai trò hiện tại
+        if (User != null && AvailableRoles.Any())
+        {
+            var firstDifferentRole = AvailableRoles.FirstOrDefault(r => r.Name != User.Role);
+            if (firstDifferentRole != null)
+            {
+                selectedRole = firstDifferentRole.Name;
+            }
+        }
+    }
+    
+    private Color GetRoleColor(string role)
+    {
+        return role switch
+        {
+            "Admin" => Color.Error,
+            "Store Manager" => Color.Warning,
+            "Customer" => Color.Info,
+            "Seller" => Color.Success,
+            "Shipper" => Color.Primary,
+            "Moderator" => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+    
+    void Submit() => MudDialog?.Close(DialogResult.Ok(selectedRole));
+    void Cancel() => MudDialog?.Close(DialogResult.Cancel());
+}
