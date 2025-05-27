@@ -13,8 +13,8 @@ public class JwtAuthService
     private readonly string? _key;
     private readonly string? _issuer;
     private readonly string? _audience;
-    private readonly MainEcommerDbContext _context;
-    public JwtAuthService(IConfiguration Configuration, MainEcommerDbContext db)
+    private readonly MainEcommerDBContext _context;
+    public JwtAuthService(IConfiguration Configuration, MainEcommerDBContext db)
     {
         _key = Configuration["jwt:Secret-Key"];
         _issuer = Configuration["jwt:Issuer"];
@@ -30,12 +30,19 @@ public class JwtAuthService
         var claims = new List<Claim>
         {
             new Claim("UserId", userLogin.UserId.ToString()), // Claim mặc định cho ID người dùng
-            new Claim("UserName", userLogin.Username),               // Claim mặc định cho username
-            // new Claim(ClaimTypes.Role, userLogin.Role),                   // Claim mặc định cho Role
+            new Claim(ClaimTypes.Name, userLogin.Username), // Claim mặc định cho usernameư
+            // new Claim(ClaimTypes.Role, userLogin.UserRoles.FirstOrDefault().Role.RoleName), // Claim mặc định cho vai trò
+            // Claim mặc định cho username
             new Claim(JwtRegisteredClaimNames.Sub, userLogin.Username),   // Subject của token
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Unique ID của token
             new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()) // Thời gian tạo token
         };
+        
+        // Add role claims
+        foreach (var userRole in userLogin.UserRoles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, userRole.Role.RoleName));
+        }
         // foreach (var role in userRoles)
         // {
         //     claims.Add(new Claim(ClaimTypes.Role, role));
@@ -79,7 +86,7 @@ public class JwtAuthService
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(token);
             // Lấy username từ claims (thường nằm trong claim "sub" hoặc "name")
-            var usernameClaim = jwtToken.Claims.FirstOrDefault(x => x.Type == "UserName"); // Common in some identity providers
+            var usernameClaim = jwtToken.Claims.FirstOrDefault(x => x.Type == "unique_name"); // Common in some identity providers
             if (usernameClaim == null)
             {
                 throw new InvalidOperationException("Không tìm thấy username trong payload");
@@ -113,7 +120,8 @@ public class JwtAuthService
             var tokenResult = new TokenResult
             {
                 UserId = jwtToken.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value,
-                UserName = jwtToken.Claims.FirstOrDefault(c => c.Type == "UserName")?.Value,
+                UserName = jwtToken.Claims.FirstOrDefault(c => c.Type == "unique_name")?.Value,
+                Role = jwtToken.Claims.FirstOrDefault(c => c.Type == "role")?.Value,
                 Sub = jwtToken.Claims.FirstOrDefault(c => c.Type == "sub")?.Value,
                 Jti = jwtToken.Claims.FirstOrDefault(c => c.Type == "jti")?.Value,
                 Iat = int.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "iat")?.Value, out var iat) ? iat : 0,
@@ -150,7 +158,7 @@ public class JwtAuthService
             var expirationTime = DateTimeOffset.FromUnixTimeSeconds(principal.Exp).UtcDateTime;
             var rft = _context.RefreshTokens.FirstOrDefault(token => token.Token == expiredToken);
             // So sánh với thời gian hiện tại (UTC)
-            if (DateTime.UtcNow > expirationTime || DateTime.Now > rft.ExpiresAt)
+            if (DateTime.UtcNow > expirationTime || DateTime.Now > rft.ExpiryDate)
             {
                 //Hết hạn thì bắt đăng nhập lại
                 return null;

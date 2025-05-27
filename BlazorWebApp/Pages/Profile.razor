@@ -1,0 +1,461 @@
+@page "/profile"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using BlazorWebApp.Services
+@using MainEcommerceService.Models.ViewModel
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserService UserService
+@inject ToastService ToastService
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+
+<PageTitle>My Profile - Grabit</PageTitle>
+
+<link href="css/profile.css" rel="stylesheet" />
+
+<div class="profile-container fade-in">
+    @if (isLoading)
+    {
+        <div class="loading-indicator" style="text-align: center; padding: 50px;">
+            <div class="loading-spinner" style="margin: 0 auto 15px;"></div>
+            <div class="loading-text">Loading profile...</div>
+        </div>
+    }
+    else if (currentUser != null)
+    {
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar-section">
+                <div class="avatar-upload">
+                    <div class="profile-avatar">
+                        @GetInitials(currentUser)
+                    </div>
+                    <div class="avatar-upload-overlay" @onclick="OpenAvatarUpload">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                </div>
+                <div class="profile-info">
+                    <h1>@GetFullName(currentUser)</h1>
+                    <div class="username">@@@currentUser.UserName</div>
+                    <div class="join-date">
+                        <i class="fas fa-calendar-alt"></i>
+                        Member since @DateTime.Now.ToString("MMMM yyyy")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Cards Grid -->
+        <div class="profile-cards">
+            <!-- Personal Information Card -->
+            <div class="profile-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h3 class="card-title">Personal Information</h3>
+                </div>
+                <EditForm Model="@editModel" OnValidSubmit="@UpdateProfile">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <InputText @bind-Value="editModel.FirstName" class="form-control" disabled="@(!isEditing)" />
+                        <ValidationMessage For="@(() => editModel.FirstName)" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <InputText @bind-Value="editModel.LastName" class="form-control" disabled="@(!isEditing)" />
+                        <ValidationMessage For="@(() => editModel.LastName)" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Username</label>
+                        <InputText @bind-Value="editModel.UserName" class="form-control" disabled="true" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email</label>
+                        <InputText @bind-Value="editModel.Email" class="form-control" disabled="true" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <InputText @bind-Value="editModel.PhoneNumber" class="form-control" disabled="@(!isEditing)" />
+                        <ValidationMessage For="@(() => editModel.PhoneNumber)" />
+                    </div>
+
+                    @if (!isEditing)
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="StartEdit">
+                            <i class="fas fa-edit"></i> Edit Profile
+                        </button>
+                    }
+                    else
+                    {
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                @if (isSaving)
+                                {
+                                    <span class="loading-spinner"></span>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-save"></i>
+                                }
+                                Save Changes
+                            </button>
+                            <button type="button" class="btn btn-secondary" @onclick="CancelEdit">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    }
+                </EditForm>
+            </div>
+
+            <!-- Account Statistics -->
+            <div class="profile-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3 class="card-title">Account Statistics</h3>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number">@userStats.TotalOrders</span>
+                        <span class="stat-label">Total Orders</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">@userStats.TotalSpent.ToString("C")</span>
+                        <span class="stat-label">Total Spent</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">@userStats.WishlistItems</span>
+                        <span class="stat-label">Wishlist Items</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">@userStats.ReviewsGiven</span>
+                        <span class="stat-label">Reviews Given</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="profile-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="card-title">Security Settings</h3>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-primary" @onclick="OpenChangePasswordDialog">
+                        <i class="fas fa-key"></i> Change Password
+                    </button>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-secondary">
+                        <i class="fas fa-mobile-alt"></i> Two-Factor Authentication
+                    </button>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-danger" @onclick="OpenDeleteAccountDialog">
+                        <i class="fas fa-trash"></i> Delete Account
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="profile-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3 class="card-title">Recent Activity</h3>
+                </div>
+                <div class="recent-activity">
+                    @if (recentActivities != null && recentActivities.Any())
+                    {
+                        @foreach (var activity in recentActivities)
+                        {
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="@GetActivityIcon(activity.Type)"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <p class="activity-text">@activity.Description</p>
+                                    <span class="activity-time">@activity.CreatedAt.ToString("MMM dd, yyyy HH:mm")</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p style="text-align: center; color: var(--light-text); padding: 20px;">
+                            No recent activity found.
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div style="text-align: center; padding: 50px;">
+            <p>Unable to load profile information. Please try again later.</p>
+            <button class="btn btn-primary" @onclick="LoadUserProfile">
+                <i class="fas fa-refresh"></i> Retry
+            </button>
+        </div>
+    }
+</div>
+
+<!-- Hidden file input for avatar upload -->
+<InputFile id="avatarInput" OnChange="@HandleAvatarUpload" accept="image/*" style="display: none;" />
+
+@code {
+    private ProfileVM? currentUser;
+    private ProfileVM editModel = new();
+    private UserStatsModel userStats = new();
+    private List<ActivityModel> recentActivities = new();
+    
+    private bool isLoading = true;
+    private bool isEditing = false;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+        await LoadUserStats();
+        await LoadRecentActivity();
+        isLoading = false;
+    }
+
+    private async Task LoadUserProfile()
+    {
+        try
+        {
+            isLoading = true;
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var userName = user.FindFirst(ClaimTypes.Name)?.Value;
+                if (!string.IsNullOrEmpty(userName))
+                {
+                    currentUser = await UserService.GetProfileAsync(userName);
+                    if (currentUser != null)
+                    {
+                        editModel = new ProfileVM
+                        {
+                            FirstName = currentUser.FirstName,
+                            LastName = currentUser.LastName,
+                            UserName = currentUser.UserName,
+                            Email = currentUser.Email,
+                            PhoneNumber = currentUser.PhoneNumber
+                        };
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error loading profile: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadUserStats()
+    {
+        try
+        {
+            if (currentUser != null)
+            {
+                userStats = new UserStatsModel
+                {
+                    TotalOrders = 15,
+                    TotalSpent = 1250.50m,
+                    WishlistItems = 8,
+                    ReviewsGiven = 12
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error loading statistics: {ex.Message}");
+        }
+    }
+
+    private async Task LoadRecentActivity()
+    {
+        try
+        {
+            if (currentUser != null)
+            {
+                recentActivities = new List<ActivityModel>
+                {
+                    new() { Type = "order", Description = "Placed order #ORD-2024-001", CreatedAt = DateTime.Now.AddDays(-1) },
+                    new() { Type = "review", Description = "Left a review for 'iPhone 15 Pro'", CreatedAt = DateTime.Now.AddDays(-3) },
+                    new() { Type = "wishlist", Description = "Added 'MacBook Air M2' to wishlist", CreatedAt = DateTime.Now.AddDays(-5) },
+                    new() { Type = "profile", Description = "Updated profile information", CreatedAt = DateTime.Now.AddDays(-7) }
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error loading activity: {ex.Message}");
+        }
+    }
+
+    private void StartEdit()
+    {
+        isEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        if (currentUser != null)
+        {
+            editModel.FirstName = currentUser.FirstName;
+            editModel.LastName = currentUser.LastName;
+            editModel.PhoneNumber = currentUser.PhoneNumber;
+        }
+    }
+
+    private async Task UpdateProfile()
+    {
+        if (currentUser == null) return;
+
+        try
+        {
+            isSaving = true;
+            
+            var updateProfile = new ProfileVM
+            {
+                FirstName = editModel.FirstName,
+                LastName = editModel.LastName,
+                UserName = editModel.UserName,
+                Email = editModel.Email,
+                PhoneNumber = editModel.PhoneNumber
+            };
+            
+            var updateResult = await UserService.UpdateProfileAsync(updateProfile);
+            
+            if (updateResult)
+            {
+                currentUser.FirstName = editModel.FirstName;
+                currentUser.LastName = editModel.LastName;
+                currentUser.PhoneNumber = editModel.PhoneNumber;
+                
+                isEditing = false;
+                ToastService.ShowSuccess("Profile updated successfully!");
+            }
+            else
+            {
+                ToastService.ShowError("Failed to update profile. Please try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error updating profile: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task OpenAvatarUpload()
+    {
+        await JSRuntime.InvokeVoidAsync("document.getElementById('avatarInput').click");
+    }
+
+    private async Task HandleAvatarUpload(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            if (file != null)
+            {
+                ToastService.ShowInfo("Avatar upload feature will be implemented soon!");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error uploading avatar: {ex.Message}");
+        }
+    }
+
+    private async Task OpenChangePasswordDialog()
+    {
+        ToastService.ShowInfo("Change password feature will be implemented soon!");
+    }
+
+    private async Task OpenDeleteAccountDialog()
+    {
+        ToastService.ShowWarning("Delete account feature will be implemented soon!");
+    }
+
+    private string GetFullName(ProfileVM user)
+    {
+        if (string.IsNullOrWhiteSpace(user.FirstName) && string.IsNullOrWhiteSpace(user.LastName))
+            return user.UserName ?? "Unknown User";
+        
+        return $"{user.FirstName?.Trim()} {user.LastName?.Trim()}".Trim();
+    }
+
+    private string GetInitials(ProfileVM user)
+    {
+        string fn = user.FirstName?.Trim() ?? "";
+        string ln = user.LastName?.Trim() ?? "";
+
+        if (string.IsNullOrEmpty(fn) && string.IsNullOrEmpty(ln))
+        {
+            string username = user.UserName?.Trim() ?? "";
+            return username.Length > 0 ? username[0].ToString().ToUpper() : "?";
+        }
+
+        if (string.IsNullOrEmpty(ln))
+            return fn.Length > 0 ? fn[0].ToString().ToUpper() : "?";
+
+        if (string.IsNullOrEmpty(fn))
+            return ln.Length > 0 ? ln[0].ToString().ToUpper() : "?";
+
+        return $"{fn[0]}{ln[0]}".ToUpper();
+    }
+
+    private string GetActivityIcon(string type)
+    {
+        return type switch
+        {
+            "order" => "fas fa-shopping-cart",
+            "review" => "fas fa-star",
+            "wishlist" => "fas fa-heart",
+            "profile" => "fas fa-user-edit",
+            _ => "fas fa-clock"
+        };
+    }
+
+    public class UserStatsModel
+    {
+        public int TotalOrders { get; set; }
+        public decimal TotalSpent { get; set; }
+        public int WishlistItems { get; set; }
+        public int ReviewsGiven { get; set; }
+    }
+
+    public class ActivityModel
+    {
+        public string Type { get; set; } = "";
+        public string Description { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+    }
+}

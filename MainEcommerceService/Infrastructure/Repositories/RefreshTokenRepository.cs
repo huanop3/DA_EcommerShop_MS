@@ -7,7 +7,7 @@ public interface IRefreshTokenRepository : IRepository<RefreshToken>
 
 public class RefreshTokenRepository : Repository<RefreshToken>, IRefreshTokenRepository
 {
-    public RefreshTokenRepository(MainEcommerDbContext context) : base(context)
+    public RefreshTokenRepository(MainEcommerDBContext context) : base(context)
     {
     }
 }

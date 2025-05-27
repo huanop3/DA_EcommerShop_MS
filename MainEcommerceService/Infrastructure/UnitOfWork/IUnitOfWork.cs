@@ -8,6 +8,7 @@ public interface IUnitOfWork : IAsyncDisposable
     public IRoleRepository _roleRepository { get; }
     public IClientRepository _clientRepository { get; }
     public ILoginLogRepository _loginLogRepository { get; }
+    public ICategoryRepository _categoryRepository { get; }
     public IRefreshTokenRepository _refreshTokenRepository { get; }
     Task BeginTransaction();
     Task CommitTransaction();
@@ -23,11 +24,12 @@ public class UnitOfWork : IUnitOfWork
     public IRoleRepository _roleRepository { get; }
     public IClientRepository _clientRepository { get; }
     public ILoginLogRepository _loginLogRepository { get; }
+    public ICategoryRepository _categoryRepository { get; }
     public IRefreshTokenRepository _refreshTokenRepository { get; }
 
-    private readonly MainEcommerDbContext  _context;
+    private readonly MainEcommerDBContext  _context;
 
-    public UnitOfWork(MainEcommerDbContext context, IUserRepository userRepository, IUserRoleRepository userRoleRepository, IRoleRepository roleRepository, IClientRepository clientRepository, ILoginLogRepository loginLogRepository, IRefreshTokenRepository refreshTokenRepository)
+    public UnitOfWork(MainEcommerDBContext context, IUserRepository userRepository, IUserRoleRepository userRoleRepository, IRoleRepository roleRepository, IClientRepository clientRepository, ILoginLogRepository loginLogRepository, IRefreshTokenRepository refreshTokenRepository, ICategoryRepository categoryRepository)
     {
         _context = context;
         _userRepository = userRepository;
@@ -36,6 +38,7 @@ public class UnitOfWork : IUnitOfWork
         _clientRepository = clientRepository;
         _loginLogRepository = loginLogRepository;
         _refreshTokenRepository = refreshTokenRepository;
+        _categoryRepository = categoryRepository;
     }
     public async Task BeginTransaction()
     {

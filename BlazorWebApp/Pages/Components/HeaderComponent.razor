@@ -1,12 +1,12 @@
 @inject LoginService LoginService
 @using System.Security.Claims
 @using System.Text.Json
-
+@inject NavigationManager _navigationManager
 <link rel="stylesheet" href="css/site.css" />
 
 
-<header class="@(_mobileMenuOpen ? "mobile-menu-is-active" : "")"> 
-    
+<header class="@(_mobileMenuOpen ? "mobile-menu-is-active" : "")">
+
     <!-- Top Bar -->
     <div class="topbar">
         <div class="container1">
@@ -30,7 +30,7 @@
                     <button>English <i class="arrow-down"></i></button>
                 </div>
                 <div class="dropdown">
-                    
+
                     <button>Dollar <i class="arrow-down"></i></button>
                 </div>
             </div>
@@ -43,29 +43,35 @@
             <button class="mobile-menu-toggle @(_mobileMenuOpen ? "active" : "")" @onclick="ToggleMobileMenu">
                 <span class="mobile-menu-icon"></span>
             </button>
-            
+
             <a href="/" class="logo">
                 <img src="/images/header/logo.png" alt="Grabit">
             </a>
-            
+
             <div class="search-bar">
                 <input type="text" placeholder="Search Products..." />
                 <button type="submit">
                     <i class="search-icon"></i>
                 </button>
             </div>
-            
+
             <div class="header-actions">
                 @if (IsAuthenticated)
                 {
-                    <div class="action-item user-dropdown" @onclick="ToggleUserMenu" style="text-decoration: none; cursor: pointer;">
+                    <div class="action-item user-dropdown" @onclick="ToggleUserMenu"
+                        style="text-decoration: none; cursor: pointer;">
                         <div class="action-content">
                             <span>Hello,</span>
                             <strong>@UserName</strong>
                         </div>
                         <i class="user-icon"></i>
-                        
+
                         <div class="user-menu @(isUserMenuOpen ? "active" : "")">
+                            <AuthorizeView Roles="Admin,Seller">
+                                <Authorized>
+                                    <a href="/admin" class="action-item">Dashboard</a>
+                                </Authorized>
+                            </AuthorizeView>
                             <a href="/profile">My Profile</a>
                             <a href="/orders">My Orders</a>
                             <a href="/addresses">My Addresses</a>
@@ -83,7 +89,7 @@
                         <i class="user-icon"></i>
                     </a>
                 }
-                
+
                 <a href="/wishlist" class="action-item" style="text-decoration: none;">
                     <div class="action-content">
                         <span>Wishlist</span>
@@ -94,7 +100,7 @@
                         <span class="notification-badge">3</span>
                     </div>
                 </a>
-                
+
                 <a href="/cart" class="action-item" style="text-decoration: none;">
                     <div class="action-content">
                         <span>Cart</span>
@@ -108,17 +114,17 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Navigation -->
     <div class="main-nav">
         <div class="container1">
             <div class="category-dropdown">
                 <button>
-                    <i class="menu-icon"></i> 
+                    <i class="menu-icon"></i>
                     <span>All Categories</span>
                     <i class="arrow-down"></i>
                 </button>
-                
+
                 @* Replace Category Submenu Content with Simple List *@
                 <div class="category-submenu">
                     @* Use a simple list structure like the image *@
@@ -126,70 +132,70 @@
                         <li class="category-submenu-list-item">
                             <a href="/laptop">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-laptop"></i> 
+                                <i class="category-icon1 category-icon-laptop"></i>
                                 <span>Máy tính xách tay</span>
                             </a>
                         </li>
                         <li class="category-submenu-list-item">
                             <a href="/gaming-laptop">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-gaming"></i> 
+                                <i class="category-icon1 category-icon-gaming"></i>
                                 <span>Laptop Gaming - Đồ Họa</span>
                             </a>
                         </li>
                         <li class="category-submenu-list-item">
                             <a href="/office-laptop">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-office"></i> 
+                                <i class="category-icon1 category-icon-office"></i>
                                 <span>Laptop Văn phòng</span>
                             </a>
                         </li>
-                         <li class="category-submenu-list-item">
+                        <li class="category-submenu-list-item">
                             <a href="/coding-laptop">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-coding"></i> 
+                                <i class="category-icon1 category-icon-coding"></i>
                                 <span>Laptop Lập trình</span>
                             </a>
                         </li>
-                         <li class="category-submenu-list-item">
+                        <li class="category-submenu-list-item">
                             <a href="/premium-laptop">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-premium"></i> 
+                                <i class="category-icon1 category-icon-premium"></i>
                                 <span>Laptop cao cấp</span>
                             </a>
                         </li>
-                         <li class="category-submenu-list-item">
+                        <li class="category-submenu-list-item">
                             <a href="/macbook">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-macbook"></i> 
+                                <i class="category-icon1 category-icon-macbook"></i>
                                 <span>Apple Macbook</span>
                             </a>
                         </li>
-                         <li class="category-submenu-list-item">
+                        <li class="category-submenu-list-item">
                             <a href="/ram-ssd">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-ram-ssd"></i> 
+                                <i class="category-icon1 category-icon-ram-ssd"></i>
                                 <span>RAM - SSD</span>
                             </a>
                         </li>
-                         <li class="category-submenu-list-item">
+                        <li class="category-submenu-list-item">
                             <a href="/accessories">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-accessories"></i> 
+                                <i class="category-icon1 category-icon-accessories"></i>
                                 <span>Kho phụ kiện</span>
                             </a>
                         </li>
-                         <li class="category-submenu-list-item">
+                        <li class="category-submenu-list-item">
                             <a href="/adapters">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-adapter"></i> 
+                                <i class="category-icon1 category-icon-adapter"></i>
                                 <span>Cổng chuyển</span>
                             </a>
                         </li>
-                         <li class="category-submenu-list-item">
+                        <li class="category-submenu-list-item">
                             <a href="/cooling">
                                 @* Change img to i tag with specific class *@
-                                <i class="category-icon1 category-icon-cooling"></i> 
+                                <i class="category-icon1 category-icon-cooling"></i>
                                 <span>Tản nhiệt laptop</span>
                             </a>
                         </li>
@@ -197,7 +203,7 @@
                     </ul>
                 </div>
             </div>
-            
+
             <div class="nav-links">
                 @* Wrap each item that needs a dropdown *@
                 <div class="nav-item-wrapper">
@@ -219,7 +225,7 @@
                 </div>
                 <div class="nav-item-wrapper">
                     <a href="#" class="nav-item">Products <i class="arrow-down"></i></a>
-                     <div class="nav-submenu">
+                    <div class="nav-submenu">
                         <a href="/prod/featured" class="nav-submenu-item">Featured</a>
                         <a href="/prod/new" class="nav-submenu-item">New Arrivals</a>
                         <a href="/prod/sale" class="nav-submenu-item">On Sale</a>
@@ -227,14 +233,14 @@
                 </div>
                 <div class="nav-item-wrapper">
                     <a href="#" class="nav-item">Blog <i class="arrow-down"></i></a>
-                     <div class="nav-submenu">
+                    <div class="nav-submenu">
                         <a href="/blog/grid" class="nav-submenu-item">Blog Grid</a>
                         <a href="/blog/list" class="nav-submenu-item">Blog List</a>
                     </div>
                 </div>
                 <div class="nav-item-wrapper">
                     <a href="#" class="nav-item">Pages <i class="arrow-down"></i></a>
-                     <div class="nav-submenu">
+                    <div class="nav-submenu">
                         <a href="/about" class="nav-submenu-item">About Us</a>
                         <a href="/contact" class="nav-submenu-item">Contact</a>
                         <a href="/faq" class="nav-submenu-item">FAQ</a>
@@ -242,7 +248,7 @@
                 </div>
                 <a href="#" class="nav-item offers"><i class="offer-icon"></i> Offers</a>
             </div>
-            
+
             <div class="location-dropdown">
                 <button>
                     <i class="location-icon"></i>
@@ -252,8 +258,8 @@
             </div>
         </div>
     </div>
-    
-    
+
+
     <!-- Mobile Menu -->
     <div class="mobile-menu @(_mobileMenuOpen ? "active" : "")">
         <div class="mobile-menu-header">
@@ -262,7 +268,7 @@
             </a>
             <button class="mobile-menu-close" @onclick="ToggleMobileMenu">×</button>
         </div>
-        
+
         <div class="mobile-nav-links">
             <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("home"))">
                 Home
@@ -272,7 +278,7 @@
                 <a href="#" class="mobile-nav-item">Home 1</a>
                 <a href="#" class="mobile-nav-item">Home 2</a>
             </div>
-            
+
             <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("categories"))">
                 Categories
                 <i class="arrow-down"></i>
@@ -282,7 +288,7 @@
                 <a href="#" class="mobile-nav-item">Vegetables</a>
                 <a href="#" class="mobile-nav-item">Meat</a>
             </div>
-            
+
             <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("products"))">
                 Products
                 <i class="arrow-down"></i>
@@ -292,7 +298,7 @@
                 <a href="#" class="mobile-nav-item">New Arrivals</a>
                 <a href="#" class="mobile-nav-item">Best Sellers</a>
             </div>
-            
+
             <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("blog"))">
                 Blog
                 <i class="arrow-down"></i>
@@ -302,7 +308,7 @@
                 <a href="#" class="mobile-nav-item">Blog List</a>
                 <a href="#" class="mobile-nav-item">Blog Details</a>
             </div>
-            
+
             <a href="#" class="mobile-nav-item" @onclick="@(() => ToggleSubmenu("pages"))">
                 Pages
                 <i class="arrow-down"></i>
@@ -312,7 +318,7 @@
                 <a href="#" class="mobile-nav-item">Contact</a>
                 <a href="#" class="mobile-nav-item">FAQ</a>
             </div>
-            
+
             <a href="#" class="mobile-nav-item offers">
                 <i class="offer-icon"></i> Offers
             </a>
@@ -337,16 +343,17 @@
         if (firstRender)
         {
             await CheckAuthenticationStatus();
+            await LoginService.RefreshToken();
             StateHasChanged();
         }
     }
-    
+
     private async Task CheckAuthenticationStatus()
     {
         try
         {
             IsAuthenticated = await LoginService.CheckAuthenticationStatus();
-            
+
             if (IsAuthenticated)
             {
                 UserName = await LoginService.GetUserName();
@@ -358,29 +365,31 @@
             IsAuthenticated = false;
         }
     }
-    
+
     private void ToggleUserMenu()
     {
         isUserMenuOpen = !isUserMenuOpen;
     }
-    
+
     private async Task Logout()
     {
         await LoginService.Logout();
+        _navigationManager.NavigateTo("/", true);
+
         IsAuthenticated = false;
         UserName = string.Empty;
     }
-    
-    private void ToggleMobileMenu() 
+
+    private void ToggleMobileMenu()
     {
         _mobileMenuOpen = !_mobileMenuOpen;
-        
+
         if (!_mobileMenuOpen)
         {
-             _openSubmenu = string.Empty;
+            _openSubmenu = string.Empty;
         }
     }
-    
+
     private void ToggleSubmenu(string submenu)
     {
         if (_openSubmenu == submenu)

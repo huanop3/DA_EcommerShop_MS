@@ -7,7 +7,7 @@ public interface IUserRoleRepository : IRepository<UserRole>
 
 public class UserRoleRepository : Repository<UserRole>, IUserRoleRepository
 {
-    public UserRoleRepository(MainEcommerDbContext context) : base(context)
+    public UserRoleRepository(MainEcommerDBContext context) : base(context)
     {
     }
 }

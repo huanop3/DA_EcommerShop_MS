@@ -12,9 +12,9 @@ public class UnitOfWork : IUnitOfWork
   
 
 
-    private readonly ProductDbContext _context;
+    private readonly ProductDBContext _context;
 
-    public UnitOfWork(ProductDbContext context)
+    public UnitOfWork(ProductDBContext context)
     {
         _context = context;
 

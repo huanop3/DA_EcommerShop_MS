@@ -7,6 +7,7 @@ using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using web_api_base.Models.ViewModel;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace BlazorWebApp.Services
 {
@@ -16,19 +17,37 @@ namespace BlazorWebApp.Services
         private readonly ILocalStorageService _localStorage;
         private readonly IJSRuntime _jsRuntime;
         private readonly NavigationManager _navigationManager;
+        private readonly AuthenticationStateProvider _authStateProvider;
 
         public LoginService(
             HttpClient httpClient,
             ILocalStorageService localStorage,
             IJSRuntime jsRuntime,
-            NavigationManager navigationManager)
+            NavigationManager navigationManager,
+            AuthenticationStateProvider authStateProvider)
         {
             _httpClient = httpClient;
             _localStorage = localStorage;
             _jsRuntime = jsRuntime;
             _navigationManager = navigationManager;
+            _authStateProvider = authStateProvider;
         }
+        // Gán token vào header trước khi gọi API
+        private async Task SetAuthorizationHeader()
+        {
+            var token = await _localStorage.GetItemAsStringAsync("token");
+            if (string.IsNullOrEmpty(token))
+            {
+                // Nếu không có token, thử refresh
+                token = await _localStorage.GetItemAsStringAsync("refreshToken");
+            }
 
+            if (!string.IsNullOrEmpty(token))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+        }
         /// <summary>
         /// Kiểm tra trạng thái đăng nhập của người dùng
         /// </summary>
@@ -37,7 +56,7 @@ namespace BlazorWebApp.Services
             try
             {
                 // Lấy token từ local storage
-                var token = await _localStorage.GetItemAsStringAsync("token");
+                var token = await _localStorage.GetItemAsStringAsync("refreshToken");
 
                 if (string.IsNullOrEmpty(token))
                 {
@@ -49,7 +68,7 @@ namespace BlazorWebApp.Services
                 {
                     token = token.Trim('"');
                     // Lưu lại token đã sửa
-                    await _localStorage.SetItemAsStringAsync("token", token);
+                    await _localStorage.SetItemAsStringAsync("refreshToken", token);
                 }
 
                 var handler = new JwtSecurityTokenHandler();
@@ -58,37 +77,26 @@ namespace BlazorWebApp.Services
                 {
                     Console.WriteLine("Token không đúng định dạng JWT");
                     await _localStorage.RemoveItemAsync("token");
+                    await _localStorage.RemoveItemAsync("refreshToken");
                     return false;
                 }
 
-                // Đọc thông tin từ token
-                var jsonToken = handler.ReadToken(token) as JwtSecurityToken;
-
-                if (jsonToken != null)
-                {
-                    // Kiểm tra hết hạn
-                    if (jsonToken.ValidTo < DateTime.UtcNow)
-                    {
-                        await _localStorage.RemoveItemAsync("token");
-                        return false;
-                    }
-
-                    return true;
-                }
-
-                return false;
+                return true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Lỗi xác thực: {ex.Message}");
                 await _localStorage.RemoveItemAsync("token");
+
+                await _localStorage.RemoveItemAsync("refreshToken");
                 return false;
             }
         }
         /// <summary>
         /// Lấy thông tin user từ token
         /// </summary>
-        public async Task<string> GetUserName(){
+        public async Task<string> GetUserName()
+        {
             try
             {
                 var token = await _localStorage.GetItemAsStringAsync("token");
@@ -102,7 +110,7 @@ namespace BlazorWebApp.Services
 
                 if (jsonToken != null)
                 {
-                    var userName = jsonToken.Claims.First(claim => claim.Type == "UserName").Value;
+                    var userName = jsonToken.Claims.First(claim => claim.Type == "unique_name").Value;
                     return userName;
                 }
             }
@@ -140,11 +148,11 @@ namespace BlazorWebApp.Services
                 };
 
                 // Gọi API đăng nhập
-                var response = await _httpClient.PostAsJsonAsync("http://localhost:5166/api/User/Login", loginRequest);
-                
+                var response = await _httpClient.PostAsJsonAsync("http://localhost:5166/api/UserLogin/LoginUser", loginRequest);
+
                 // Phân tích phản hồi từ server
                 var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<UserLoginResponseVM>>();
-                
+
                 if (result == null)
                 {
                     return (false, "Không nhận được phản hồi từ server");
@@ -153,19 +161,21 @@ namespace BlazorWebApp.Services
                 // Nếu đăng nhập thành công
                 if (result.Success && result.Data != null)
                 {
-                    // Lưu token vào local storage và cookie
+                    // Lưu token vào local storage
                     await _localStorage.SetItemAsStringAsync("token", result.Data.AccessToken);
-                    
+
+
                     // Lưu refresh token
                     if (!string.IsNullOrEmpty(result.Data.RefreshToken))
                     {
                         await _localStorage.SetItemAsStringAsync("refreshToken", result.Data.RefreshToken);
-                        await _jsRuntime.InvokeVoidAsync("setCookie", "refreshToken", result.Data.RefreshToken);
                     }
-                    
-                    // Lưu token vào cookie
-                    await _jsRuntime.InvokeVoidAsync("setCookie", "token", result.Data.AccessToken);
-                    
+
+                    // Lưu token vào cookie với thời hạn ngắn (1 ngày)
+                    await _jsRuntime.InvokeVoidAsync("setCookie", "token", result.Data.AccessToken, 1);
+
+                    // Thông báo đăng nhập thành công
+
                     return (true, result.Message ?? "Đăng nhập thành công");
                 }
                 else
@@ -188,16 +198,16 @@ namespace BlazorWebApp.Services
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("http://localhost:5166/api/User/RegisterUser", registerModel);
-                
+                var response = await _httpClient.PostAsJsonAsync("http://localhost:5166/api/UserLogin/RegisterUser", registerModel);
+
                 // Đọc phản hồi từ server
                 var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<RegisterLoginVM>>();
-                
+
                 if (result == null)
                 {
                     return (false, "Không nhận được phản hồi từ server");
                 }
-                
+
                 if (result.Success)
                 {
                     return (true, result.Message ?? "Đăng ký thành công");
@@ -217,25 +227,35 @@ namespace BlazorWebApp.Services
         /// <summary>
         /// Đăng xuất khỏi hệ thống
         /// </summary>
-        public async Task Logout(bool redirectToHome = true)
+        public async Task Logout()
         {
-            await _localStorage.RemoveItemAsync("token");
-            await _localStorage.RemoveItemAsync("refreshToken");
-            await _jsRuntime.InvokeVoidAsync("deleteCookie", "token");
-            await _jsRuntime.InvokeVoidAsync("deleteCookie", "refreshToken");
-            
-            if (redirectToHome)
+            await SetAuthorizationHeader();
+            var refreshToken = await _localStorage.GetItemAsStringAsync("refreshToken");
+
+            // Lưu lại token đã sửa
+            var response = await _httpClient.PutAsJsonAsync("http://localhost:5166/api/UserLogin/Logout", refreshToken);
+            if (response.IsSuccessStatusCode)
             {
-                _navigationManager.NavigateTo("/", true);
+                await _localStorage.RemoveItemAsync("token");
+                await _localStorage.RemoveItemAsync("refreshToken");
+                await _jsRuntime.InvokeVoidAsync("deleteCookie", "token");
+
+                // Thông báo đã đăng xuất
             }
+            else
+            {
+                Console.WriteLine("Lỗi khi đăng xuất");
+            }
+
+
         }
 
-        public async Task<LoginRequestVM> CollectDeviceInfo()
+        public async Task<DeviceInfoVM> CollectDeviceInfo()
         {
             try
             {
                 // Kiểm tra xem đã có thông tin thiết bị chưa
-                var existingInfo = await _localStorage.GetItemAsync<LoginRequestVM>("deviceInfo");
+                var existingInfo = await _localStorage.GetItemAsync<DeviceInfoVM>("deviceInfo");
                 if (existingInfo != null)
                 {
                     // Cập nhật thời gian thu thập
@@ -248,7 +268,7 @@ namespace BlazorWebApp.Services
                 var timeoutTask = Task.Delay(5000); // 5 giây timeout
 
                 // Thu thập thông tin thiết bị từ JavaScript
-                var jsTask = _jsRuntime.InvokeAsync<LoginRequestVM>("getFullDeviceInfo").AsTask();
+                var jsTask = _jsRuntime.InvokeAsync<DeviceInfoVM>("getFullDeviceInfo").AsTask();
 
                 // Chờ task nào hoàn thành trước
                 var completedTask = await Task.WhenAny(jsTask, timeoutTask);
@@ -276,11 +296,11 @@ namespace BlazorWebApp.Services
                 return null;
             }
         }
-        public async Task<LoginRequestVM> GetDeviceInfo()
+        public async Task<DeviceInfoVM> GetDeviceInfo()
         {
             try
             {
-                var deviceInfo = await _localStorage.GetItemAsync<LoginRequestVM>("deviceInfo");
+                var deviceInfo = await _localStorage.GetItemAsync<DeviceInfoVM>("deviceInfo");
                 if (deviceInfo == null)
                 {
                     deviceInfo = await CollectDeviceInfo();
@@ -300,28 +320,48 @@ namespace BlazorWebApp.Services
         {
             try
             {
-                var refreshToken = await _localStorage.GetItemAsStringAsync("refreshToken");
-                if (string.IsNullOrEmpty(refreshToken))
+                // Gọi hàm SetAuthorizationHeader để thiết lập header Authorization
+                var LoginCheck = new UserLoginResponseVM();
+                LoginCheck.Username = await GetUserName();
+                if (string.IsNullOrEmpty(LoginCheck.Username))
+                {
+                    Console.WriteLine("Tên người dùng không tồn tại");
+                    return;
+                }
+                LoginCheck.AccessToken = await _localStorage.GetItemAsStringAsync("token");
+                if (string.IsNullOrEmpty(LoginCheck.AccessToken))
+                {
+                    Console.WriteLine("Token không tồn tại");
+                    return;
+                }
+                LoginCheck.RefreshToken = await _localStorage.GetItemAsStringAsync("refreshToken");
+                if (string.IsNullOrEmpty(LoginCheck.RefreshToken))
                 {
                     Console.WriteLine("Refresh token không tồn tại");
-                    await Logout();
                     return;
                 }
 
-                var response = await _httpClient.PostAsJsonAsync("http://localhost:5166/api/User/refresh-Token", refreshToken);
-                
-                if (response.IsSuccessStatusCode)
+                var response = await _httpClient.PostAsJsonAsync("http://localhost:5166/api/UserLogin/refresh-Token", LoginCheck);
+
+                if (response.IsSuccessStatusCode) // 201 Created
                 {
                     var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<UserLoginResponseVM>>();
-                    if (result != null && result.Success && result.Data != null)
+                    if (result != null && result.Success && result.Data != null && result.StatusCode == 201)
                     {
                         await _localStorage.SetItemAsStringAsync("token", result.Data.AccessToken);
                         await _localStorage.SetItemAsStringAsync("refreshToken", result.Data.RefreshToken);
                     }
+                    else if (result != null && result.Success && result.StatusCode == 401)
+                    {
+                        await Logout();
+                    }
+                    else if (result != null && result.Success && result.StatusCode == 200)
+                    {
+                        //Token còn hạn
+                    }
+
                 }
-                else {
-                    await Logout();
-                }
+
             }
             catch (Exception ex)
             {

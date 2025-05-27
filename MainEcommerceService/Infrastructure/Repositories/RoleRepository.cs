@@ -7,7 +7,7 @@ public interface IRoleRepository : IRepository<Role>
 
 public class RoleRepository : Repository<Role>, IRoleRepository
 {
-    public RoleRepository(MainEcommerDbContext context) : base(context)
+    public RoleRepository(MainEcommerDBContext context) : base(context)
     {
     }
 }

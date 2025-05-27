@@ -7,7 +7,7 @@ public interface IClientRepository : IRepository<Client>
 
 public class ClientRepository : Repository<Client>, IClientRepository
 {
-    public ClientRepository(MainEcommerDbContext context) : base(context)
+    public ClientRepository(MainEcommerDBContext context) : base(context)
     {
     }
 }

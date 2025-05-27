@@ -7,7 +7,7 @@ public interface IUserRepository : IRepository<User>
 
 public class UserRepository : Repository<User>, IUserRepository
 {
-    public UserRepository(MainEcommerDbContext context) : base(context)
+    public UserRepository(MainEcommerDBContext context) : base(context)
     {
     }
 }

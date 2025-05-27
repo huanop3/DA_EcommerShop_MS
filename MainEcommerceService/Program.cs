@@ -1,20 +1,21 @@
 using System.Security.Claims;
 using System.Text;
+using MainEcommerceService.Hubs;
 using MainEcommerceService.Models.dbMainEcommer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 //Add service entity framework
 var connectionString = builder.Configuration.GetConnectionString("MainDbService");
-builder.Services.AddDbContext<MainEcommerDbContext>(options =>
+builder.Services.AddDbContext<MainEcommerDBContext>(options =>
     options
         .UseLazyLoadingProxies()
         .UseSqlServer(connectionString));
@@ -78,6 +79,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         // Kiểm tra thời gian hết hạn của token, không cho phép sử dụng token hết hạn
         ValidateLifetime = true
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine("OnAuthenticationFailed: " + context.Exception.Message);
+            return Task.CompletedTask;
+        }
+    };
 });
 //DI Service JWT
 builder.Services.AddScoped<JwtAuthService>();
@@ -95,20 +104,53 @@ builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 //DI UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 //DI Service
+builder.Services.AddScoped<IUserLoginService, UserLoginService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddHttpClient();
+
+// Lấy chuỗi kết nối Redis từ cấu hình
+var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection");
+
+// Thêm SignalR với Redis Backplane
+builder.Services.AddSignalR(options =>
+{
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15); // Giảm xuống từ 30s mặc định
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30); // Giảm xuống từ 60s
+    options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+})
+    .AddStackExchangeRedis(redisConnectionString, options => {
+        options.Configuration.ChannelPrefix = "MainEcommerceService";
+    }).AddJsonProtocol();
+
+// Cấu hình Redis Cache với cùng một connection string
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = redisConnectionString;
+    options.InstanceName = builder.Configuration["Redis:InstanceName"];
+});
+
+// Cấu hình ConnectionMultiplexer với cùng một connection string
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp => {
+    return ConnectionMultiplexer.Connect(redisConnectionString);
+});
+
+builder.Services.AddSingleton<RedisHelper>();
+
 //Add middleware controller
 builder.Services.AddControllers();
 //bật cors
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("allow_all", builder =>
-    {
-            builder.AllowAnyOrigin()
+    options.AddPolicy("CorsPolicy", builder =>
+        builder
+            .WithOrigins("http://localhost:5093") // Thêm tất cả domain client của bạn
+            .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
+            .AllowCredentials()); // Quan trọng cho SignalR
 });
+
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 // Configure the HTTP request pipeline.
@@ -117,12 +159,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseCors("allow_all");
-app.MapControllers();
-//Phân quyền
+app.UseCors("CorsPolicy");
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+// Middleware xác thực phải đặt đúng thứ tự
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseHttpsRedirection();
+// MapControllers phải đặt sau Authentication và Authorization
+app.MapControllers();
+app.MapHub<NotificationHub>("/notificationHub");
 app.Run();
 

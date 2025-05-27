@@ -1,20 +1,49 @@
 @page "/login"
 @using web_api_base.Models.ViewModel
+@using BlazorWebApp.Services
 @inject NavigationManager NavigationManager
 @inject LoginService LoginService
+
 <PageTitle>Login - Grocery Shop</PageTitle>
 
 <link href="css/auth.css" rel="stylesheet" />
 
-@if (isLoggingIn)
+<!-- Success Modal -->
+@if (showSuccessModal)
 {
-    <div class="loading-overlay fade-in">
-        <div class="loading-spinner-large"></div>
-        <p class="loading-text-large">Logging in to your account...</p>
+    <div class="success-modal-overlay fade-in">
+        <div class="success-modal">
+            <div class="success-modal-content">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>Welcome Back!</h3>
+                <p class="success-message">
+                    Welcome <strong>@currentUserName</strong>! You have successfully logged in.
+                </p>
+                <div class="countdown-info">
+                    <p>Redirecting to home page in <span class="countdown">@redirectCountdown</span> seconds...</p>
+                </div>
+                <div class="success-actions">
+                    <button class="btn-submit" @onclick="RedirectToHome">
+                        <i class="fas fa-home mr-2"></i>
+                        Go to Home
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 }
 
 <div class="auth-container">
+    @if (isLoggingIn)
+    {
+        <div class="loading-overlay fade-in">
+            <div class="loading-spinner-large"></div>
+            <p class="loading-text-large">Logging in to your account...</p>
+        </div>
+    }
+
     <div class="auth-box">
         <div class="auth-header">
             <h2>Login to Your Account</h2>
@@ -89,11 +118,11 @@
                 </div>
 
                 <div class="social-auth">
-                    <button class="btn-social btn-google">
+                    <button class="btn-social btn-google" @onclick="HandleGoogleLogin">
                         <i class="fab fa-google"></i>
                         <span>Login with Google</span>
                     </button>
-                    <button class="btn-social btn-facebook">
+                    <button class="btn-social btn-facebook" @onclick="HandleFacebookLogin">
                         <i class="fab fa-facebook-f"></i>
                         <span>Login with Facebook</span>
                     </button>
@@ -113,14 +142,17 @@
     private bool isCheckingAuth = true;
     private bool isLoggingIn = false;
     private bool formSubmitted = false;
+    private bool showSuccessModal = false;
     private string errorMessage = string.Empty;
+    private string currentUserName = string.Empty;
+    private int redirectCountdown = 3;
+    private Timer? countdownTimer;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await CheckAuthenticationStatus();
-            await LoginService.RefreshToken();
             StateHasChanged();
         }
     }
@@ -175,10 +207,14 @@
             
             if (success)
             {
-                // Add a short delay for better UX while loading indicator shows
-                await Task.Delay(800);
-                // Chuyển hướng đến trang chính sau khi đăng nhập thành công
-                NavigationManager.NavigateTo("/", true);
+                // Lưu tên user để hiển thị trong success modal
+                currentUserName = loginModel.Username;
+                
+                // Chờ một chút để UI update xong trước khi hiển thị modal
+                await Task.Delay(500);
+                
+                // Hiển thị success modal
+                await ShowSuccessModalAsync();
             }
             else
             {
@@ -199,9 +235,66 @@
         }
     }
 
+    private async Task ShowSuccessModalAsync()
+    {
+        // Đảm bảo loading overlay đã tắt trước khi hiển thị modal
+        isLoggingIn = false;
+        StateHasChanged();
+        
+        // Chờ một chút để UI render
+        await Task.Delay(100);
+        
+        showSuccessModal = true;
+        redirectCountdown = 3; // 3 giây cho login (ngắn hơn register)
+        StateHasChanged();
+
+        // Bắt đầu countdown timer
+        countdownTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(() =>
+            {
+                redirectCountdown--;
+                if (redirectCountdown <= 0)
+                {
+                    countdownTimer?.Dispose();
+                    RedirectToHome();
+                }
+                else
+                {
+                    StateHasChanged();
+                }
+            });
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+
+    private void RedirectToHome()
+    {
+        countdownTimer?.Dispose();
+        showSuccessModal = false;
+        NavigationManager.NavigateTo("/", true);
+    }
+
     private void HandleInvalidSubmit()
     {
         formSubmitted = true;
         errorMessage = "Please enter valid username and password";
+    }
+
+    private void HandleGoogleLogin()
+    {
+        // Placeholder for Google login
+        errorMessage = "Google login will be implemented soon!";
+    }
+
+    private void HandleFacebookLogin()
+    {
+        // Placeholder for Facebook login
+        errorMessage = "Facebook login will be implemented soon!";
+    }
+
+    public void Dispose()
+    {
+        countdownTimer?.Dispose();
     }
 }

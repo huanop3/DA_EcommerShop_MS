@@ -1,16 +1,49 @@
 @page "/register"
 @using web_api_base.Models.ViewModel
+@using BlazorWebApp.Services
 @inject NavigationManager NavigationManager
 @inject LoginService LoginService
+@inject SignalRService SignalRService
 
 <PageTitle>Register - Grocery Shop</PageTitle>
 
 <link href="css/auth.css" rel="stylesheet" />
+
 @if (isRegistering)
 {
     <div class="loading-overlay fade-in">
         <div class="loading-spinner-large"></div>
         <p class="loading-text-large">Creating your account...</p>
+    </div>
+}
+
+<!-- Success Modal -->
+@if (showSuccessModal)
+{
+    <div class="success-modal-overlay fade-in">
+        <div class="success-modal">
+            <div class="success-modal-content">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>Registration Successful!</h3>
+                <p class="success-message">
+                    Welcome <strong>@registerModel.FirstName</strong>! Your account has been created successfully.
+                </p>
+                <div class="countdown-info">
+                    <p>Redirecting to login page in <span class="countdown">@redirectCountdown</span> seconds...</p>
+                </div>
+                <div class="success-actions">
+                    <button class="btn-submit" @onclick="RedirectToLogin">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        Login Now
+                    </button>
+                    <button class="btn-secondary" @onclick="CloseSuccessModal">
+                        Stay Here
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 }
 
@@ -109,7 +142,6 @@
                     }
                 </div>
                 
-                
                 <div class="form-submit">
                     <button type="submit" class="btn-submit" disabled="@isRegistering">
                         @if (isRegistering)
@@ -153,7 +185,19 @@
     private bool ShowConfirmPassword { get; set; } = false;
     private bool isRegistering = false;
     private bool formSubmitted = false;
+    private bool showSuccessModal = false;
     private string errorMessage = string.Empty;
+    private int redirectCountdown = 5;
+    private Timer? countdownTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Đảm bảo kết nối SignalR được thiết lập
+        if (!SignalRService.IsConnected)
+        {
+            await SignalRService.StartConnectionAsync();
+        }
+    }
 
     private void TogglePasswordVisibility()
     {
@@ -168,7 +212,7 @@
     private async Task HandleRegistration()
     {
         formSubmitted = true;
-        errorMessage = string.Empty; // Clear previous errors
+        errorMessage = string.Empty;
         isRegistering = true;
         
         try
@@ -182,7 +226,6 @@
                 string.IsNullOrWhiteSpace(registerModel.ConfirmPassword))
             {
                 errorMessage = "Please fill in all required fields";
-                isRegistering = false;
                 return;
             }
             
@@ -190,31 +233,40 @@
             if (registerModel.Password != registerModel.ConfirmPassword)
             {
                 errorMessage = "Passwords don't match";
-                isRegistering = false;
                 return;
             }
-            
-            // Validate terms agreement
-            if (!registerModel.IsChecked)
+
+            // Basic email validation
+            if (!IsValidEmail(registerModel.Email))
             {
-                errorMessage = "You must agree to the Terms of Service and Privacy Policy";
-                isRegistering = false;
+                errorMessage = "Please enter a valid email address";
                 return;
             }
             
-            // Attempt registration
             var result = await LoginService.Register(registerModel);
             bool success = result.Success;
 
             if (success)
             {
-                // Add a short delay for better UX
-                await Task.Delay(800);
-                NavigationManager.NavigateTo("/login");
+                // Chờ một chút để UI update xong trước khi hiển thị modal
+                await Task.Delay(500);
+                
+                // Hiển thị success modal
+                await ShowSuccessModalAsync();
+                
+                // Thông báo qua SignalR cho admin về user mới đăng ký
+                string fullName = $"{registerModel.FirstName} {registerModel.LastName}".Trim();
+                if (string.IsNullOrEmpty(fullName))
+                {
+                    fullName = registerModel.Username;
+                }
+                
+                // Thông báo qua SignalR
+                await SignalRService.NotifyUserCreatedAsync(fullName);
             }
             else
             {
-                errorMessage = "Registration failed. The username or email may already be in use.";
+                errorMessage ="Registration failed. The username or email may already be in use.";
             }
         }
         catch (Exception ex)
@@ -228,10 +280,74 @@
             StateHasChanged();
         }
     }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task ShowSuccessModalAsync()
+    {
+        // Đảm bảo loading overlay đã tắt trước khi hiển thị modal
+        isRegistering = false;
+        StateHasChanged();
+        
+        // Chờ một chút để UI render
+        await Task.Delay(100);
+        
+        showSuccessModal = true;
+        redirectCountdown = 5;
+        StateHasChanged();
+
+        // Bắt đầu countdown timer
+        countdownTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(() =>
+            {
+                redirectCountdown--;
+                if (redirectCountdown <= 0)
+                {
+                    countdownTimer?.Dispose();
+                    RedirectToLogin();
+                }
+                else
+                {
+                    StateHasChanged();
+                }
+            });
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private void CloseSuccessModal()
+    {
+        showSuccessModal = false;
+        countdownTimer?.Dispose();
+        StateHasChanged();
+    }
+
+    private void RedirectToLogin()
+    {
+        countdownTimer?.Dispose();
+        showSuccessModal = false;
+        NavigationManager.NavigateTo("/login");
+    }
     
     private void HandleInvalidSubmit()
     {
         formSubmitted = true;
         errorMessage = "Please enter valid information in all required fields";
+    }
+
+    public void Dispose()
+    {
+        countdownTimer?.Dispose();
     }
 }

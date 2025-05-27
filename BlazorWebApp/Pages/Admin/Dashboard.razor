@@ -1,8 +1,10 @@
+@page "/admin"
 @page "/admin/dashboard"
 @using MudBlazor
 @using MudBlazor.Charts
 @layout _AdminLayout
-
+@* @attribute [Authorize(Roles = "Seller")] *@
+@attribute [Authorize(Roles = "Admin,Seller")]
 <PageTitle>Admin Dashboard - Grabit</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-4">Dashboard Overview</MudText>

@@ -26,6 +26,8 @@ function getDeviceInfo() {
         clientName = "Microsoft Edge";
     } else if (userAgent.indexOf("Chrome") > -1) {
         clientName = "Chrome";
+    } else if (userAgent.indexOf("coc_coc_browser") > -1 || userAgent.indexOf("CocCoc") > -1) {
+    clientName = "Cốc Cốc";
     } else if (userAgent.indexOf("Safari") > -1) {
         clientName = "Safari";
     } 

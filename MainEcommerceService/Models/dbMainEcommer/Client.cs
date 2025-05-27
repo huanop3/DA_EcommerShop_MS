@@ -19,9 +19,9 @@ public partial class Client
 
     public bool IsDeleted { get; set; }
 
-    public string? DeviceId { get; set; }
-
     public string? Ipaddress { get; set; }
+
+    public string? DeviceId { get; set; }
 
     public virtual ICollection<LoginLog> LoginLogs { get; set; } = new List<LoginLog>();
 

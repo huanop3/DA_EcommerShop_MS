@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MainEcommerceService.Models.dbMainEcommer;
 
-public partial class MainEcommerDbContext : DbContext
+public partial class MainEcommerDBContext : DbContext
 {
-    public MainEcommerDbContext()
+    public MainEcommerDBContext()
     {
     }
 
-    public MainEcommerDbContext(DbContextOptions<MainEcommerDbContext> options)
+    public MainEcommerDBContext(DbContextOptions<MainEcommerDBContext> options)
         : base(options)
     {
     }
@@ -68,7 +68,7 @@ public partial class MainEcommerDbContext : DbContext
     {
         modelBuilder.Entity<Address>(entity =>
         {
-            entity.HasKey(e => e.AddressId).HasName("PK__Addresse__091C2AFB124A3817");
+            entity.HasKey(e => e.AddressId).HasName("PK__Addresse__091C2AFB8678047E");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Addresses_IsDeleted");
 
@@ -92,7 +92,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<Cart>(entity =>
         {
-            entity.HasKey(e => e.CartId).HasName("PK__Carts__51BCD7B78C5E445D");
+            entity.HasKey(e => e.CartId).HasName("PK__Carts__51BCD7B7CD6D23CD");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -108,7 +108,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<CartItem>(entity =>
         {
-            entity.HasKey(e => e.CartItemId).HasName("PK__CartItem__488B0B0A1DB1F156");
+            entity.HasKey(e => e.CartItemId).HasName("PK__CartItem__488B0B0ABF9595CB");
 
             entity.HasIndex(e => e.IsDeleted, "IX_CartItems_IsDeleted");
 
@@ -129,7 +129,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<Category>(entity =>
         {
-            entity.HasKey(e => e.CategoryId).HasName("PK__Categori__19093A0B2DAD7872");
+            entity.HasKey(e => e.CategoryId).HasName("PK__Categori__19093A0B9C8F389E");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Categories_IsDeleted");
 
@@ -148,7 +148,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<Client>(entity =>
         {
-            entity.HasKey(e => e.ClientId).HasName("PK__Clients__E67E1A246636592A");
+            entity.HasKey(e => e.ClientId).HasName("PK__Clients__E67E1A243532E993");
 
             entity.HasIndex(e => e.ClientName, "UQ_Clients_ClientName").IsUnique();
 
@@ -156,19 +156,14 @@ public partial class MainEcommerDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
-            entity.Property(e => e.DeviceId)
-                .HasMaxLength(100)
-                .HasColumnName("DeviceID");
             entity.Property(e => e.DeviceName).HasMaxLength(50);
-            entity.Property(e => e.Ipaddress)
-                .HasMaxLength(50)
-                .HasColumnName("IPAddress");
+            entity.Property(e => e.Ipaddress).HasColumnName("Ipaddress ");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
         });
 
         modelBuilder.Entity<Coupon>(entity =>
         {
-            entity.HasKey(e => e.CouponId).HasName("PK__Coupons__384AF1BA64224640");
+            entity.HasKey(e => e.CouponId).HasName("PK__Coupons__384AF1BA2BE549CA");
 
             entity.HasIndex(e => e.CouponCode, "UQ_Coupons_CouponCode").IsUnique();
 
@@ -188,7 +183,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<LoginLog>(entity =>
         {
-            entity.HasKey(e => e.LogId).HasName("PK__LoginLog__5E548648D549C80B");
+            entity.HasKey(e => e.LogId).HasName("PK__LoginLog__5E5486482A2ED825");
 
             entity.ToTable("LoginLog");
 
@@ -213,7 +208,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<Order>(entity =>
         {
-            entity.HasKey(e => e.OrderId).HasName("PK__Orders__C3905BCFE1E34C58");
+            entity.HasKey(e => e.OrderId).HasName("PK__Orders__C3905BCFF75D0E6B");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Orders_IsDeleted");
 
@@ -246,7 +241,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<OrderItem>(entity =>
         {
-            entity.HasKey(e => e.OrderItemId).HasName("PK__OrderIte__57ED068183498477");
+            entity.HasKey(e => e.OrderItemId).HasName("PK__OrderIte__57ED06816F0202CF");
 
             entity.HasIndex(e => e.IsDeleted, "IX_OrderItems_IsDeleted");
 
@@ -268,7 +263,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<OrderStatus>(entity =>
         {
-            entity.HasKey(e => e.StatusId).HasName("PK__OrderSta__C8EE206380FFC2E2");
+            entity.HasKey(e => e.StatusId).HasName("PK__OrderSta__C8EE206382E6E975");
 
             entity.HasIndex(e => e.StatusName, "UQ_OrderStatuses_StatusName").IsUnique();
 
@@ -283,7 +278,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<Payment>(entity =>
         {
-            entity.HasKey(e => e.PaymentId).HasName("PK__Payments__9B556A38D9A78CC1");
+            entity.HasKey(e => e.PaymentId).HasName("PK__Payments__9B556A388D4EDB4F");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Payments_IsDeleted");
 
@@ -306,7 +301,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<ProductReference>(entity =>
         {
-            entity.HasKey(e => e.ProductId).HasName("PK__ProductR__B40CC6CD8E942B94");
+            entity.HasKey(e => e.ProductId).HasName("PK__ProductR__B40CC6CDDE347CB0");
 
             entity.HasIndex(e => e.IsDeleted, "IX_ProductReferences_IsDeleted");
 
@@ -335,7 +330,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<ProductServiceEvent>(entity =>
         {
-            entity.HasKey(e => e.EventId).HasName("PK__ProductS__7944C810BEA90F11");
+            entity.HasKey(e => e.EventId).HasName("PK__ProductS__7944C81076AFA301");
 
             entity.HasIndex(e => e.IsProcessed, "IX_ProductServiceEvents_IsProcessed");
 
@@ -358,7 +353,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<Promotion>(entity =>
         {
-            entity.HasKey(e => e.PromotionId).HasName("PK__Promotio__52C42FCF625CCAD7");
+            entity.HasKey(e => e.PromotionId).HasName("PK__Promotio__52C42FCF389B2481");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -375,7 +370,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<PromotionProduct>(entity =>
         {
-            entity.HasKey(e => e.PromotionProductId).HasName("PK__Promotio__C7B85D1CEBF48E12");
+            entity.HasKey(e => e.PromotionProductId).HasName("PK__Promotio__C7B85D1CD6F9B7E6");
 
             entity.HasIndex(e => e.IsDeleted, "IX_PromotionProducts_IsDeleted");
 
@@ -393,7 +388,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<RefreshToken>(entity =>
         {
-            entity.HasKey(e => e.TokenId).HasName("PK__RefreshT__658FEEEA26DD9D69");
+            entity.HasKey(e => e.TokenId).HasName("PK__RefreshT__658FEEEADABDDC91");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -424,7 +419,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<Role>(entity =>
         {
-            entity.HasKey(e => e.RoleId).HasName("PK__Roles__8AFACE1A62318235");
+            entity.HasKey(e => e.RoleId).HasName("PK__Roles__8AFACE1A56755B93");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -437,7 +432,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<SellerProfile>(entity =>
         {
-            entity.HasKey(e => e.SellerId).HasName("PK__SellerPr__7FE3DB81A1742EC4");
+            entity.HasKey(e => e.SellerId).HasName("PK__SellerPr__7FE3DB81425909A3");
 
             entity.HasIndex(e => e.UserId, "UQ_SellerProfiles_UserId").IsUnique();
 
@@ -456,7 +451,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<Shipment>(entity =>
         {
-            entity.HasKey(e => e.ShipmentId).HasName("PK__Shipment__5CAD37EDF21CE4E4");
+            entity.HasKey(e => e.ShipmentId).HasName("PK__Shipment__5CAD37EDF9594F7B");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Shipments_IsDeleted");
 
@@ -483,7 +478,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<ShipperProfile>(entity =>
         {
-            entity.HasKey(e => e.ShipperId).HasName("PK__ShipperP__1F8AFE5935313EA6");
+            entity.HasKey(e => e.ShipperId).HasName("PK__ShipperP__1F8AFE59FC2C0565");
 
             entity.Property(e => e.CompanyName).HasMaxLength(255);
             entity.Property(e => e.ContactName).HasMaxLength(100);
@@ -499,7 +494,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4C0FEB755B");
+            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4CD2E145B4");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Users_IsDeleted");
 
@@ -524,7 +519,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<UserCoupon>(entity =>
         {
-            entity.HasKey(e => e.UserCouponId).HasName("PK__UserCoup__22994B53DB5CD28A");
+            entity.HasKey(e => e.UserCouponId).HasName("PK__UserCoup__22994B533049D85C");
 
             entity.HasIndex(e => e.IsDeleted, "IX_UserCoupons_IsDeleted");
 
@@ -551,7 +546,7 @@ public partial class MainEcommerDbContext : DbContext
 
         modelBuilder.Entity<UserRole>(entity =>
         {
-            entity.HasKey(e => e.UserRoleId).HasName("PK__UserRole__3D978A35170D11C3");
+            entity.HasKey(e => e.UserRoleId).HasName("PK__UserRole__3D978A35B7DAB393");
 
             entity.HasIndex(e => new { e.UserId, e.RoleId }, "UQ_UserRoles").IsUnique();
 

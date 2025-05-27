@@ -7,7 +7,7 @@ public interface ILoginLogRepository : IRepository<LoginLog>
 
 public class LoginLogRepository : Repository<LoginLog>, ILoginLogRepository
 {
-    public LoginLogRepository(MainEcommerDbContext context) : base(context)
+    public LoginLogRepository(MainEcommerDBContext context) : base(context)
     {
     }
 }

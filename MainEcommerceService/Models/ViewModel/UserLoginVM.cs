@@ -48,10 +48,6 @@ public class RegisterLoginVM
     [RegularExpression(@"^(0|\+84)[3|5|7|8|9][0-9]{8}$",
         ErrorMessage = "Số điện thoại không đúng định dạng Việt Nam")]
     public string PhoneNumber { get; set; }
-
-    [Required(ErrorMessage = "Bạn phải đồng ý với điều khoản sử dụng")]
-    [Range(typeof(bool), "true", "true", ErrorMessage = "Bạn phải đồng ý với điều khoản sử dụng")]
-    public bool IsChecked { get; set; }
 }
 public class UserLoginResponseVM
 {

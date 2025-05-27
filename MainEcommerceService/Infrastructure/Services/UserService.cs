@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.SignalR;
+using MainEcommerceService.Hubs;
 using System.Linq.Expressions;
 using MainEcommerceService.Helper;
 using MainEcommerceService.Models.dbMainEcommer;
@@ -6,353 +8,448 @@ using Microsoft.EntityFrameworkCore;
 
 public interface IUserService
 {
-    Task<HTTPResponseClient<UserLoginResponseVM>> Login(LoginRequestVM loginRequest);
-    Task<HTTPResponseClient<String>> Register(RegisterLoginVM registerLoginVM);
-    Task<HTTPResponseClient<UserLoginResponseVM>> ForgotPassword(string email);
-    Task<HTTPResponseClient<UserLoginResponseVM>> ResetPassword(string token, string newPassword);
-    Task<HTTPResponseClient<int>> CountLoginLog(string username);
-    Task<HTTPResponseClient<UserLoginResponseVM>> RefreshToken(string tokenVM);
+    Task<HTTPResponseClient<IEnumerable<UserVM>>> GetAllUser();
+    Task<HTTPResponseClient<IEnumerable<UserVM>>> GetUserByPage(int pageIndex, int pageSize);
+    Task<HTTPResponseClient<IEnumerable<RoleVM>>> GetAllRole();
+    Task<HTTPResponseClient<ProfileVM>> GetProfileByUserName(string userName);
+    Task<HTTPResponseClient<string>> UpdateProfile(ProfileVM profileVM);
+    Task<HTTPResponseClient<string>> UpdateUser(UserListVM userlistVM);
+    Task<HTTPResponseClient<string>> DeleteUser(int userId);
 }
 
 public class UserService : IUserService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly JwtAuthService _jwtAuthService;
+    private readonly RedisHelper _cacheService;
+    private readonly IHubContext<NotificationHub> _hubContext;
 
-    public UserService(IUnitOfWork unitOfWork, JwtAuthService jwtAuthService)
+    public UserService(
+        IUnitOfWork unitOfWork,
+        JwtAuthService jwtAuthService,
+        RedisHelper cacheService,
+        IHubContext<NotificationHub> hubContext)
     {
         _unitOfWork = unitOfWork;
         _jwtAuthService = jwtAuthService;
+        _cacheService = cacheService;
+        _hubContext = hubContext;
     }
-
-    /// <summary>
-    /// Executes an operation within a transaction with standardized error handling
-    /// </summary>
-    private async Task<HTTPResponseClient<T>> ExecuteInTransaction<T>(Func<Task<HTTPResponseClient<T>>> operation,int StatusCode, string errorMessage)
+    public async Task<HTTPResponseClient<IEnumerable<UserVM>>> GetAllUser()
     {
-        var response = new HTTPResponseClient<T>();
+        var response = new HTTPResponseClient<IEnumerable<UserVM>>();
         try
         {
-            await _unitOfWork.BeginTransaction();
-            response = await operation();
-            await _unitOfWork.CommitTransaction();
-            return response;
-        }
-        catch (Exception ex)
-        {
-            await _unitOfWork.RollbackTransaction();
-            response.Success = false;
-            response.StatusCode = StatusCode; // Internal Server Error
-            response.Message = $"{errorMessage}: {ex.Message}";
-            response.DateTime = DateTime.Now;
-            return response;
-        }
-    }
+            const string cacheKey = "AllUsers";
 
-    /// <summary>
-    /// Finds or creates a client device in the database
-    /// </summary>
-    private async Task<Client> GetOrCreateClientDevice(LoginRequestVM loginRequest)
-    {
-        var client = await _unitOfWork._clientRepository.SingleOrDefaultAsync(x => 
-            x.DeviceId == loginRequest.DeviceID && x.ClientName == loginRequest.ClientName);
-            
-        if (client == null)
-        {
-            client = new Client
+            // Kiểm tra cache trước
+            var cachedUsers = await _cacheService.GetAsync<IEnumerable<UserVM>>(cacheKey);
+            if (cachedUsers != null)
             {
-                ClientName = loginRequest.ClientName,
-                DeviceName = loginRequest.DeviceName,
-                Description = "Thiết bị của người dùng",
-                DeviceId = loginRequest.DeviceID,
-                Ipaddress = loginRequest.IPAddress,
-                CreatedAt = loginRequest.CollectedAt == default ? DateTime.Now : loginRequest.CollectedAt,
-                UpdatedAt = DateTime.Now
-            };
-            
-            await _unitOfWork._clientRepository.AddAsync(client);
-            await _unitOfWork.SaveChangesAsync();
-        }
-        else
-        {
-            client.UpdatedAt = DateTime.Now;
-            _unitOfWork._clientRepository.Update(client);
-            await _unitOfWork.SaveChangesAsync();
-        }
-        
-        return client;
-    }
-
-    /// <summary>
-    /// Finds a user by username
-    /// </summary>
-    private async Task<User> GetUserByUsername(string username)
-    {
-        return await _unitOfWork._userRepository.SingleOrDefaultAsync(x => x.Username == username);
-    }
-
-    /// <summary>
-    /// Creates a refresh token for a user
-    /// </summary>
-    private async Task<RefreshToken> CreateRefreshToken(User user, Client client, LoginRequestVM loginRequest)
-    {
-        var refreshToken = new RefreshToken
-        {
-            UserId = user.UserId,
-            ClientId = client.ClientId,
-            Token = _jwtAuthService.GenerateToken(user, 10080), // 7 days
-            DeviceName = loginRequest.DeviceName,
-            DeviceId = loginRequest.DeviceID,
-            DeviceOs = loginRequest.DeviceOS,
-            Ipaddress = loginRequest.IPAddress,
-            ExpiryDate = DateTime.Now.AddDays(7),
-            CreatedAt = DateTime.Now,
-            IsRevoked = false,
-            IsDeleted = false
-        };
-        
-        await _unitOfWork._refreshTokenRepository.AddAsync(refreshToken);
-        await _unitOfWork.SaveChangesAsync();
-        
-        return refreshToken;
-    }
-
-    public Task<HTTPResponseClient<UserLoginResponseVM>> ForgotPassword(string email)
-    {
-        // Khi triển khai, cần thêm các status code: 200, 404, 500
-        throw new NotImplementedException();
-    }
-
-    public async Task<HTTPResponseClient<UserLoginResponseVM>> Login(LoginRequestVM loginRequest)
-    {
-        return await ExecuteInTransaction(async () =>
-        {
-            var response = new HTTPResponseClient<UserLoginResponseVM>();
-            
-            if (string.IsNullOrEmpty(loginRequest.DeviceID) || string.IsNullOrEmpty(loginRequest.DeviceName))
-            {
-                response.Success = false;
-                response.StatusCode = 400; // Bad Request
-                response.Message = "Không có thông tin thiết bị";
-                return response;
-            }
-            
-            // Kiểm tra giới hạn đăng nhập trước khi xác thực
-            var today = DateTime.Today;
-            var tomorrow = today.AddDays(1);
-            
-            // Tìm client
-            var existingClient = await _unitOfWork._clientRepository.SingleOrDefaultAsync(x => 
-                x.DeviceId == loginRequest.DeviceID && x.ClientName == loginRequest.ClientName);
-                
-            if (existingClient != null)
-            {
-                // Đếm số lần đăng nhập từ thiết bị này trong ngày
-                var loginAttempts = await _unitOfWork._loginLogRepository.CountAsync(x => 
-                    x.ClientId == existingClient.ClientId && 
-                    x.LoginTime >= today && 
-                    x.LoginTime < tomorrow);
-                    
-                if (loginAttempts >= 10) // Giới hạn 10 lần/ngày
-                {
-                    response.Success = false;
-                    response.StatusCode = 429; // Too Many Requests
-                    response.Message = "Thiết bị này đã vượt quá giới hạn số lần đăng nhập trong ngày. Vui lòng thử lại vào ngày mai.";
-                    return response;
-                }
-            }
-            
-            // Verify user credentials
-            var user = await GetUserByUsername(loginRequest.Username);
-            
-            if (user == null || !PasswordHelper.VerifyPassword(loginRequest.Password, user.PasswordHash))
-            {
-                // Ghi nhận lần đăng nhập thất bại để tính vào giới hạn
-                if (existingClient != null)
-                {
-                    var failedLoginLog = new LoginLog()
-                    {
-                        Username = loginRequest.Username,
-                        UserId = user.UserId,
-                        ClientId = existingClient.ClientId,
-                        IpAddress = loginRequest.IPAddress,
-                        LoginTime = DateTime.Now,
-                        CreatedAt = DateTime.Now,
-                        UpdatedAt = DateTime.Now,
-                        IsSuccessful = false
-                    };
-                    
-                    await _unitOfWork._loginLogRepository.AddAsync(failedLoginLog);
-                    await _unitOfWork.SaveChangesAsync();
-                }
-                
-                response.Success = false;
-                response.StatusCode = 401; // Unauthorized
-                response.Message = "Tên đăng nhập hoặc mật khẩu không đúng";
-                return response;
-            }
-
-            // Create access token
-            var accessToken = _jwtAuthService.GenerateToken(user, 60); // 60 minutes
-            
-            // Get or create client device
-            var client = await GetOrCreateClientDevice(loginRequest);
-            
-            // Create refresh token
-            var refreshToken = await CreateRefreshToken(user, client, loginRequest);
-            
-            // Save login log
-            var loginLog = new LoginLog()
-            {
-                Username = user.Username,
-                UserId = user.UserId,
-                ClientId = client.ClientId,
-                IpAddress = loginRequest.IPAddress,
-                LoginTime = DateTime.Now,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now,
-                IsSuccessful = true
-            };
-            
-            await _unitOfWork._loginLogRepository.AddAsync(loginLog);
-            await _unitOfWork.SaveChangesAsync();
-            
-            // Prepare response
-            response.Data = new UserLoginResponseVM
-            {
-                Username = user.Username,
-                AccessToken = accessToken,
-                RefreshToken = refreshToken.Token,
-            };
-            
-            response.Success = true;
-            response.StatusCode = 200; // OK
-            response.Message = "Đăng nhập thành công";
-            response.DateTime = DateTime.Now;
-            return response;
-        },500, "Lỗi đăng nhập");
-    }
-
-    public async Task<HTTPResponseClient<string>> Register(RegisterLoginVM registerLoginVM)
-    {
-        return await ExecuteInTransaction(async () =>
-        {
-            var response = new HTTPResponseClient<string>();
-            
-            // Check if user already exists
-            var user = await _unitOfWork._userRepository.SingleOrDefaultAsync(x => 
-                x.Username == registerLoginVM.Username || x.Email == registerLoginVM.Email);
-                
-            if (user == null)
-            {
-                // Create new user
-                var newUser = new User()
-                {
-                    Username = registerLoginVM.Username,
-                    Email = registerLoginVM.Email,
-                    FirstName = registerLoginVM.FirstName,
-                    LastName = registerLoginVM.LastName,
-                    PhoneNumber = registerLoginVM.PhoneNumber,
-                    PasswordHash = PasswordHelper.HashPassword(registerLoginVM.Password),
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
-                };
-
-                await _unitOfWork._userRepository.AddAsync(newUser);
-                await _unitOfWork.SaveChangesAsync();
-                
+                response.Data = cachedUsers;
                 response.Success = true;
-                response.StatusCode = 201; // Created
-                response.Message = "Đăng ký thành công";
+                response.StatusCode = 200; // OK
+                response.Message = "Lấy danh sách người dùng từ cache thành công";
+                response.DateTime = DateTime.Now;
+                return response;
             }
-            else
-            {
-                response.Success = false;
-                response.StatusCode = 409; // Conflict
-                response.Message = "Tên đăng nhập hoặc email đã tồn tại";
-            }
-            
-            response.DateTime = DateTime.Now;
-            return response;
-        }, 500, "Đăng ký thất bại");
-    }
 
-    public Task<HTTPResponseClient<UserLoginResponseVM>> ResetPassword(string token, string newPassword)
-    {
-        // Khi triển khai, cần thêm các status code: 200, 400, 404
-        throw new NotImplementedException();
-    }
-   
-    public async Task<HTTPResponseClient<int>> CountLoginLog(string username)
-    {
-        var response = new HTTPResponseClient<int>();
-        try
-        {
-            // Find user
-            var user = await GetUserByUsername(username);
-            if (user == null)
+            // Nếu không có trong cache, lấy từ database
+            var users = await _unitOfWork._userRepository.GetAllAsync();
+
+            if (users == null || !users.Any())
             {
                 response.Success = false;
                 response.StatusCode = 404; // Not Found
-                response.Message = "Người dùng không tồn tại";
+                response.Message = "Không tìm thấy người dùng nào";
                 return response;
             }
-            
-            // Get current date (reset to 00:00:00)
-            var today = DateTime.Today;
-            var tomorrow = today.AddDays(1);
-            
-            // Count user login logs for current day
-            var count = await _unitOfWork._loginLogRepository.CountAsync(x => 
-                x.UserId == user.UserId && 
-                x.IsSuccessful == true && 
-                x.LoginTime >= today && 
-                x.LoginTime < tomorrow);
-                
-            response.Data = count;
+
+            var userIds = users.Select(u => u.UserId).ToList();
+            var userRoles = await _unitOfWork._userRoleRepository.Query()
+                .Where(ur => userIds.Contains(ur.UserId))
+                .Include(ur => ur.Role)
+                .ToListAsync();
+
+            var userVMs = new List<UserVM>();
+            foreach (var user in users)
+            {
+                var role = userRoles
+                    .Where(ur => ur.UserId == user.UserId)
+                    .Select(ur => ur.Role?.RoleName)
+                    .FirstOrDefault() ?? "Chưa có vai trò";
+
+                userVMs.Add(new UserVM
+                {
+                    Id = user.UserId,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    UserName = user.Username,
+                    Email = user.Email,
+                    Role = role,
+                    JoinedDate = user.CreatedAt,
+                    IsActive = user.IsActive,
+                    IsDeleted = user.IsDeleted
+                });
+            }
+
+            // Lưu vào cache
+            await _cacheService.SetAsync(cacheKey, userVMs, TimeSpan.FromMinutes(30));
+
+            response.Data = userVMs;
             response.Success = true;
             response.StatusCode = 200; // OK
-            response.Message = "Đếm số lần đăng nhập thành công trong ngày";
+            response.Message = "Lấy danh sách người dùng thành công";
             response.DateTime = DateTime.Now;
         }
         catch (Exception ex)
         {
             response.Success = false;
             response.StatusCode = 500; // Internal Server Error
-            response.Message = $"Đếm số lần đăng nhập thất bại: {ex.Message}";
+            response.Message = $"Lỗi khi lấy danh sách người dùng: {ex.Message}";
             response.DateTime = DateTime.Now;
         }
         return response;
-    } 
-
-    public async Task<HTTPResponseClient<UserLoginResponseVM>> RefreshToken(string tokenVM)
+    }
+    /// <summary>
+    /// Lấy danh sách người dùng theo phân trang
+    /// </summary>
+    public async Task<HTTPResponseClient<IEnumerable<UserVM>>> GetUserByPage(int pageIndex, int pageSize)
     {
-        return await ExecuteInTransaction(async () =>
+        var response = new HTTPResponseClient<IEnumerable<UserVM>>();
+        try
         {
-            string? newAccessToken = _jwtAuthService.RefreshToken(tokenVM);
-            if (newAccessToken == null)
+            // Kiểm tra cache trước
+            const string cacheKey = "PagedUsers";
+            var cachedUsers = await _cacheService.GetAsync<IEnumerable<UserVM>>(cacheKey);
+            if (cachedUsers != null)
             {
-                return new HTTPResponseClient<UserLoginResponseVM>
-                {
-                    Success = false,
-                    StatusCode = 401, // Unauthorized
-                    Message = "Token đã hết hạn hoặc không hợp lệ",
-                    DateTime = DateTime.Now
-                };
+                response.Data = cachedUsers;
+                response.Success = true;
+                response.StatusCode = 200; // OK
+                response.Message = "Lấy danh sách người dùng từ cache thành công";
+                response.DateTime = DateTime.Now;
+                return response;
             }
-            return new HTTPResponseClient<UserLoginResponseVM>
+            var users = await _unitOfWork._userRepository.GetByPageAsync(pageIndex, pageSize);
+            if (users == null || !users.Any())
             {
-                Success = true,
-                StatusCode = 200, // OK
-                Message = "Làm mới token thành công",
-                DateTime = DateTime.Now,
-                Data = new UserLoginResponseVM
-                {
-                    RefreshToken = tokenVM,
-                    AccessToken = newAccessToken,
-                }
-            };
+                response.Success = false;
+                response.StatusCode = 404; // Not Found
+                response.Message = "Không tìm thấy người dùng nào";
+                return response;
+            }
+            var userIds = users.Select(u => u.UserId).ToList();
+            var userRoles = await _unitOfWork._userRoleRepository.Query()
+                .Where(ur => userIds.Contains(ur.UserId))
+                .Include(ur => ur.Role)
+                .ToListAsync();
 
-        },404, "Refresh token thất bại");
+            var userVMs = new List<UserVM>();
+            foreach (var user in users)
+            {
+                var role = userRoles
+                    .Where(ur => ur.UserId == user.UserId)
+                    .Select(ur => ur.Role?.RoleName)
+                    .FirstOrDefault() ?? "Chưa có vai trò";
+
+                userVMs.Add(new UserVM
+                {
+                    Id = user.UserId,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    UserName = user.Username,
+                    Email = user.Email,
+                    Role = role,
+                    JoinedDate = user.CreatedAt,
+                    IsActive = user.IsActive,
+                    IsDeleted = user.IsDeleted
+                });
+            }
+            // Lưu vào cache
+            await _cacheService.SetAsync(cacheKey, userVMs, TimeSpan.FromMinutes(30));
+            // Trả về danh sách người dùng
+            response.Data = userVMs;
+            response.Success = true;
+            response.StatusCode = 200; // OK
+            response.Message = "Lấy danh sách người dùng theo phân trang thành công";
+            response.DateTime = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.StatusCode = 500; // Internal Server Error
+            response.Message = $"Lỗi khi lấy danh sách người dùng theo phân trang: {ex.Message}";
+            response.DateTime = DateTime.Now;
+        }
+        return response;
+    }
+    public async Task<HTTPResponseClient<IEnumerable<RoleVM>>> GetAllRole()
+    {
+        var response = new HTTPResponseClient<IEnumerable<RoleVM>>();
+        try
+        {
+            var roles = await _unitOfWork._roleRepository.GetAllAsync();
+            if (roles == null || !roles.Any())
+            {
+                response.Success = false;
+                response.StatusCode = 404; // Not Found
+                response.Message = "Không tìm thấy vai trò nào";
+                return response;
+            }
+            var roleVMs = roles.Select(role => new RoleVM
+            {
+                RoleName = role.RoleName
+            }).ToList();
+
+            response.Data = roleVMs;
+            response.Success = true;
+            response.StatusCode = 200; // OK
+            response.Message = "Lấy danh sách vai trò thành công";
+            response.DateTime = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.StatusCode = 500; // Internal Server Error
+            response.Message = $"Lỗi khi lấy danh sách vai trò: {ex.Message}";
+            response.DateTime = DateTime.Now;
+        }
+        return response;
+    }
+    /// <summary>
+    /// Lấy thông tin người dùng hiện tại chưa bị xóa
+    /// </summary>
+
+    public async Task<HTTPResponseClient<string>> UpdateUser(UserListVM userlistVM)
+    {
+        var response = new HTTPResponseClient<string>();
+        try
+        {
+            // Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            var user = await _unitOfWork._userRepository.GetByIdAsync(userlistVM.Id);
+            if (user == null)
+            {
+                response.Success = false;
+                response.StatusCode = 404; // Not Found
+                response.Message = "Không tìm thấy người dùng";
+                return response;
+            }
+            user.FirstName = userlistVM.FirstName;
+            user.LastName = userlistVM.LastName;
+            user.Email = userlistVM.Email;
+            user.IsActive = userlistVM.IsActive;
+
+            //Lay roleid trong bang role
+            var role = await _unitOfWork._roleRepository.Query()
+                .FirstOrDefaultAsync(r => r.RoleName == userlistVM.Role);
+
+            //Cap nhat role
+            var userRole = await _unitOfWork._userRoleRepository.Query()
+                .FirstOrDefaultAsync(ur => ur.UserId == userlistVM.Id);
+
+            if (userRole != null)
+            {
+                userRole.RoleId = role.RoleId;
+            }
+            else
+            {
+                userRole = new UserRole
+                {
+                    UserId = userlistVM.Id,
+                    RoleId = role.RoleId
+                };
+                await _unitOfWork._userRoleRepository.AddAsync(userRole);
+            }
+
+            _unitOfWork._userRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Commit transaction khi tất cả thành công
+            await _unitOfWork.CommitTransaction();
+
+            // Xóa cache để đảm bảo dữ liệu mới nhất
+            await _cacheService.DeleteAsync("AllUsers");
+            await _cacheService.DeleteAsync("PagedUsers");
+
+            // Gửi thông báo realtime qua SignalR
+            await _hubContext.Clients.All.SendAsync("UserUpdated", userlistVM.Id, userlistVM.LastName);
+
+            // Gửi thông báo trạng thái nếu có thay đổi
+            if (user.IsActive == true)
+            {
+                await _hubContext.Clients.All.SendAsync("UserStatusChanged", userlistVM.Id, "Active");
+            }
+            else
+            {
+                await _hubContext.Clients.All.SendAsync("UserStatusChanged", userlistVM.Id, "Inactive");
+            }
+
+            response.Success = true;
+            response.StatusCode = 200; // OK
+            response.Message = "Cập nhật thông tin người dùng thành công";
+            response.Data = "Cập nhật thành công";
+        }
+        catch (Exception ex)
+        {
+            // Rollback transaction nếu có lỗi
+            await _unitOfWork.RollbackTransaction();
+
+            response.Success = false;
+            response.StatusCode = 500; // Internal Server Error
+            response.Message = $"Lỗi khi cập nhật thông tin người dùng: {ex.Message}";
+        }
+        return response;
+    }
+    public async Task<HTTPResponseClient<string>> DeleteUser(int userId)
+    {
+        var response = new HTTPResponseClient<string>();
+        try
+        {
+            // Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            var user = await _unitOfWork._userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                response.Success = false;
+                response.StatusCode = 404; // Not Found
+                response.Message = "Không tìm thấy người dùng";
+                return response;
+            }
+
+            // Xóa user role trước
+            var userRole = await _unitOfWork._userRoleRepository.Query()
+                .FirstOrDefaultAsync(ur => ur.UserId == userId);
+
+            if (userRole != null)
+            {
+                //Đặt trạng thái xóa cho user role
+                userRole.IsDeleted = true;
+                _unitOfWork._userRoleRepository.Update(userRole);
+            }
+
+            // Đặt trạng thái xóa cho user
+            user.IsDeleted = true;
+            _unitOfWork._userRepository.Update(user);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            // Commit transaction khi tất cả thành công
+            await _unitOfWork.CommitTransaction();
+
+            // Xóa cache
+            await _cacheService.DeleteAsync("AllUsers");
+            await _cacheService.DeleteAsync("PagedUsers");
+
+            // Gửi thông báo realtime qua SignalR
+            await _hubContext.Clients.All.SendAsync("UserDeleted", userId);
+
+            response.Success = true;
+            response.StatusCode = 200; // OK
+            response.Message = "Xóa người dùng thành công";
+            response.Data = "Xóa thành công";
+        }
+        catch (Exception ex)
+        {
+            // Rollback transaction nếu có lỗi
+            await _unitOfWork.RollbackTransaction();
+
+            response.Success = false;
+            response.StatusCode = 500; // Internal Server Error
+            response.Message = $"Lỗi khi xóa người dùng: {ex.Message}";
+        }
+        return response;
+    }
+    public async Task<HTTPResponseClient<ProfileVM>> GetProfileByUserName(string userName)
+    {
+        var response = new HTTPResponseClient<ProfileVM>();
+        try
+        {
+            var user = await _unitOfWork._userRepository.Query()
+                .FirstOrDefaultAsync(u => u.Username == userName && u.IsDeleted == false);
+            if (user == null)
+            {
+                response.Success = false;
+                response.StatusCode = 404; // Not Found
+                response.Message = "Không tìm thấy người dùng";
+                return response;
+            }
+            var profileVM = new ProfileVM
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                UserName = user.Username,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber
+            };
+            response.Data = profileVM;
+            response.Success = true;
+            response.StatusCode = 200; // OK
+            response.Message = "Lấy thông tin người dùng thành công";
+            response.DateTime = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.StatusCode = 500; // Internal Server Error
+            response.Message = $"Lỗi khi lấy thông tin người dùng: {ex.Message}";
+            response.DateTime = DateTime.Now;
+        }
+        return response;
+    }
+    public async Task<HTTPResponseClient<string>> UpdateProfile(ProfileVM profileVM)
+    {
+        var response = new HTTPResponseClient<string>();
+        try
+        {
+            // Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            var user = await _unitOfWork._userRepository.Query()
+                .FirstOrDefaultAsync(u => u.Username == profileVM.UserName && u.IsDeleted == false);
+            if (user == null)
+            {
+                response.Success = false;
+                response.StatusCode = 404; // Not Found
+                response.Message = "Không tìm thấy người dùng";
+                return response;
+            }
+
+            user.FirstName = profileVM.FirstName;
+            user.LastName = profileVM.LastName;
+            user.Email = profileVM.Email;
+            user.PhoneNumber = profileVM.PhoneNumber;
+
+            _unitOfWork._userRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Commit transaction khi tất cả thành công
+            await _unitOfWork.CommitTransaction();
+
+            // Xóa cache để đảm bảo dữ liệu mới nhất
+            await _cacheService.DeleteAsync("AllUsers");
+            await _cacheService.DeleteAsync("PagedUsers");
+
+            // Gửi thông báo realtime qua SignalR
+            await _hubContext.Clients.All.SendAsync("ProfileUpdated", user.Username);
+
+            response.Success = true;
+            response.StatusCode = 200; // OK
+            response.Message = "Cập nhật thông tin người dùng thành công";
+            response.Data = "Cập nhật thành công";
+        }
+        catch (Exception ex)
+        {
+            // Rollback transaction nếu có lỗi
+            await _unitOfWork.RollbackTransaction();
+
+            response.Success = false;
+            response.StatusCode = 500; // Internal Server Error
+            response.Message = $"Lỗi khi cập nhật thông tin người dùng: {ex.Message}";
+        }
+        return response;
     }
 }

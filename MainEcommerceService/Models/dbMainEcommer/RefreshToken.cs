@@ -34,5 +34,4 @@ public partial class RefreshToken
     public virtual Client? Client { get; set; }
 
     public virtual User User { get; set; } = null!;
-    public DateTime ExpiresAt { get; internal set; }
 }
