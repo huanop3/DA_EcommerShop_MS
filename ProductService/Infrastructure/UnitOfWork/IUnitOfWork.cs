@@ -3,21 +3,23 @@ using ProductService.Models.dbProduct;
 
 public interface IUnitOfWork : IAsyncDisposable
 {
-
+    public ICategoryRepository _categoryRepository { get; }
+    Task BeginTransaction();
+    Task CommitTransaction();
+    Task RollbackTransaction();
+    
     Task<int> SaveChangesAsync();
 }
 
 public class UnitOfWork : IUnitOfWork
 {
-  
-
-
     private readonly ProductDBContext _context;
+    public ICategoryRepository _categoryRepository { get; }
 
-    public UnitOfWork(ProductDBContext context)
+    public UnitOfWork(ProductDBContext context, ICategoryRepository categoryRepository)
     {
         _context = context;
-
+        _categoryRepository = categoryRepository;
     }
     public async Task BeginTransaction()
     {

@@ -21,8 +21,6 @@ public partial class MainEcommerDBContext : DbContext
 
     public virtual DbSet<CartItem> CartItems { get; set; }
 
-    public virtual DbSet<Category> Categories { get; set; }
-
     public virtual DbSet<Client> Clients { get; set; }
 
     public virtual DbSet<Coupon> Coupons { get; set; }
@@ -36,14 +34,6 @@ public partial class MainEcommerDBContext : DbContext
     public virtual DbSet<OrderStatus> OrderStatuses { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
-
-    public virtual DbSet<ProductReference> ProductReferences { get; set; }
-
-    public virtual DbSet<ProductServiceEvent> ProductServiceEvents { get; set; }
-
-    public virtual DbSet<Promotion> Promotions { get; set; }
-
-    public virtual DbSet<PromotionProduct> PromotionProducts { get; set; }
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
@@ -125,25 +115,6 @@ public partial class MainEcommerDBContext : DbContext
                 .HasForeignKey(d => d.CartId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CartItems_Carts");
-        });
-
-        modelBuilder.Entity<Category>(entity =>
-        {
-            entity.HasKey(e => e.CategoryId).HasName("PK__Categori__19093A0B9C8F389E");
-
-            entity.HasIndex(e => e.IsDeleted, "IX_Categories_IsDeleted");
-
-            entity.Property(e => e.CategoryId).ValueGeneratedNever();
-            entity.Property(e => e.CategoryName).HasMaxLength(255);
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
-            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-
-            entity.HasOne(d => d.ParentCategory).WithMany(p => p.InverseParentCategory)
-                .HasForeignKey(d => d.ParentCategoryId)
-                .HasConstraintName("FK_Categories_ParentCategory");
         });
 
         modelBuilder.Entity<Client>(entity =>
@@ -299,93 +270,6 @@ public partial class MainEcommerDBContext : DbContext
                 .HasConstraintName("FK_Payments_Orders");
         });
 
-        modelBuilder.Entity<ProductReference>(entity =>
-        {
-            entity.HasKey(e => e.ProductId).HasName("PK__ProductR__B40CC6CDDE347CB0");
-
-            entity.HasIndex(e => e.IsDeleted, "IX_ProductReferences_IsDeleted");
-
-            entity.Property(e => e.ProductId).ValueGeneratedNever();
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.DiscountPrice).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
-            entity.Property(e => e.LastSyncedAt).HasColumnType("datetime");
-            entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.ProductName).HasMaxLength(255);
-            entity.Property(e => e.ProductTags).HasMaxLength(500);
-            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-
-            entity.HasOne(d => d.Category).WithMany(p => p.ProductReferences)
-                .HasForeignKey(d => d.CategoryId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ProductReferences_Categories");
-
-            entity.HasOne(d => d.Seller).WithMany(p => p.ProductReferences)
-                .HasForeignKey(d => d.SellerId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ProductReferences_SellerProfiles");
-        });
-
-        modelBuilder.Entity<ProductServiceEvent>(entity =>
-        {
-            entity.HasKey(e => e.EventId).HasName("PK__ProductS__7944C81076AFA301");
-
-            entity.HasIndex(e => e.IsProcessed, "IX_ProductServiceEvents_IsProcessed");
-
-            entity.HasIndex(e => e.Status, "IX_ProductServiceEvents_Status");
-
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.EventType).HasMaxLength(50);
-            entity.Property(e => e.IsProcessed).HasDefaultValue(false);
-            entity.Property(e => e.ProcessedAt).HasColumnType("datetime");
-            entity.Property(e => e.ReceivedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.Status)
-                .HasMaxLength(20)
-                .HasDefaultValue("Pending");
-            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-        });
-
-        modelBuilder.Entity<Promotion>(entity =>
-        {
-            entity.HasKey(e => e.PromotionId).HasName("PK__Promotio__52C42FCF389B2481");
-
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.DiscountPercent).HasColumnType("decimal(5, 2)");
-            entity.Property(e => e.EndDate).HasColumnType("datetime");
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
-            entity.Property(e => e.PromotionName).HasMaxLength(255);
-            entity.Property(e => e.StartDate).HasColumnType("datetime");
-            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-        });
-
-        modelBuilder.Entity<PromotionProduct>(entity =>
-        {
-            entity.HasKey(e => e.PromotionProductId).HasName("PK__Promotio__C7B85D1CD6F9B7E6");
-
-            entity.HasIndex(e => e.IsDeleted, "IX_PromotionProducts_IsDeleted");
-
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
-            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-
-            entity.HasOne(d => d.Promotion).WithMany(p => p.PromotionProducts)
-                .HasForeignKey(d => d.PromotionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PromotionProducts_Promotions");
-        });
-
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.HasKey(e => e.TokenId).HasName("PK__RefreshT__658FEEEADABDDC91");
@@ -405,7 +289,6 @@ public partial class MainEcommerDBContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.IsRevoked).HasDefaultValue(false);
             entity.Property(e => e.RevokedAt).HasColumnType("datetime");
-            entity.Property(e => e.Token).HasMaxLength(255);
 
             entity.HasOne(d => d.Client).WithMany(p => p.RefreshTokens)
                 .HasForeignKey(d => d.ClientId)

@@ -440,48 +440,162 @@ public class UserLoginService : IUserLoginService
     {
         return await ExecuteInTransaction(async () =>
         {
-            //Kiểm tra token xem con hiệu lực hay không
-            var token = _jwtAuthService.DecodePayloadTokenInfo(tokenVM);
-            var tokenExpiryDate = DateTimeOffset.FromUnixTimeSeconds(token.Exp).UtcDateTime;
-            if (tokenExpiryDate < DateTime.UtcNow)
+            var response = new HTTPResponseClient<UserLoginResponseVM>();
+
+            // Validate input
+            if (string.IsNullOrEmpty(tokenVM) || string.IsNullOrEmpty(refreshToken))
             {
-                string? newAccessToken = _jwtAuthService.RefreshToken(refreshToken);
-                if (newAccessToken == null)
-                {
-                    return new HTTPResponseClient<UserLoginResponseVM>
-                    {
-                        Success = true,
-                        StatusCode = 401, // Unauthorized
-                        Message = "Refresh token đã hết hạn hoặc không hợp lệ",
-                        DateTime = DateTime.Now
-                    };
-                }
-                return new HTTPResponseClient<UserLoginResponseVM>
-                {
-                    Success = true,
-                    StatusCode = 201, // Created
-                    Message = "Làm mới token thành công",
-                    DateTime = DateTime.Now,
-                    Data = new UserLoginResponseVM
-                    {
-                        Username = token.UserName,
-                        RefreshToken = refreshToken,
-                        AccessToken = newAccessToken,
-                    }
-                };
-            }
-            else
-            {
-                //tra ve thong bao token còn hiệu lực
-                return new HTTPResponseClient<UserLoginResponseVM>
-                {
-                    Success = true,
-                    StatusCode = 200, // OK
-                    Message = "Token còn hiệu lực",
-                    DateTime = DateTime.Now
-                };
+                response.Success = false;
+                response.StatusCode = 400;
+                response.Message = "Token hoặc refresh token không hợp lệ";
+                response.DateTime = DateTime.Now;
+                return response;
             }
 
-        }, 404, "Refresh token thất bại");
+            try
+            {
+                // Decode và validate token
+                var tokenCheck = _jwtAuthService.DecodePayloadTokenInfo(tokenVM);
+                if (tokenCheck == null)
+                {
+                    response.Success = false;
+                    response.StatusCode = 401;
+                    response.Message = "Token không hợp lệ";
+                    response.DateTime = DateTime.Now;
+                    return response;
+                }
+
+                // Kiểm tra user
+                var userCheck = await GetUserByUsername(tokenCheck.UserName);
+                if (userCheck == null || userCheck.IsDeleted == true)
+                {
+                    response.Success = false;
+                    response.StatusCode = 404;
+                    response.Message = "Người dùng không tồn tại hoặc đã bị xóa";
+                    response.DateTime = DateTime.Now;
+                    return response;
+                }
+
+                // Kiểm tra refresh token
+                var existingRefreshToken = await _unitOfWork._refreshTokenRepository.SingleOrDefaultAsync(x =>
+                    x.Token == refreshToken && x.IsRevoked == false && x.IsDeleted == false);
+                    
+                if (existingRefreshToken == null)
+                {
+                    response.Success = false;
+                    response.StatusCode = 401;
+                    response.Message = "Refresh token không hợp lệ hoặc đã hết hạn";
+                    response.DateTime = DateTime.Now;
+                    return response;
+                }
+
+                // Kiểm tra expiry của refresh token
+                if (existingRefreshToken.ExpiryDate <= DateTime.Now)
+                {
+                    // Revoke expired refresh token
+                    existingRefreshToken.IsRevoked = true;
+                    existingRefreshToken.RevokedAt = DateTime.Now;
+                    _unitOfWork._refreshTokenRepository.Update(existingRefreshToken);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    response.Success = false;
+                    response.StatusCode = 401;
+                    response.Message = "Refresh token đã hết hạn";
+                    response.DateTime = DateTime.Now;
+                    return response;
+                }
+
+                // Kiểm tra role changes
+                var userRoles = await _unitOfWork._userRoleRepository.SingleOrDefaultAsync(us => us.UserId == existingRefreshToken.UserId);
+                var role = await _unitOfWork._roleRepository.GetByIdAsync(userRoles.RoleId);
+                var tokenRole = _jwtAuthService.DecodePayloadTokenInfo(existingRefreshToken.Token);
+
+                // Nếu role thay đổi, tạo refresh token mới
+                if (role.RoleName != tokenRole.Role)
+                {
+                    var client = await _unitOfWork._clientRepository.SingleOrDefaultAsync(x =>
+                        x.ClientId == existingRefreshToken.ClientId);
+                        
+                    if (client == null)
+                    {
+                        response.Success = false;
+                        response.StatusCode = 404;
+                        response.Message = "Thiết bị không tồn tại";
+                        response.DateTime = DateTime.Now;
+                        return response;
+                    }
+
+                    var newRefreshToken = await CreateRefreshToken(userCheck, client, new LoginRequestVM
+                    {
+                        DeviceID = existingRefreshToken.DeviceId,
+                        DeviceName = existingRefreshToken.DeviceName,
+                        DeviceOS = existingRefreshToken.DeviceOs,
+                        IPAddress = existingRefreshToken.Ipaddress,
+                        ClientName = client.ClientName,
+                        CollectedAt = DateTime.Now
+                    });
+
+                    var newAccessToken = _jwtAuthService.GenerateToken(userCheck, 60);
+
+                    response.Success = true;
+                    response.StatusCode = 201;
+                    response.Message = "Làm mới token thành công (role đã thay đổi)";
+                    response.DateTime = DateTime.Now;
+                    response.Data = new UserLoginResponseVM
+                    {
+                        Username = userCheck.Username,
+                        RefreshToken = newRefreshToken.Token,
+                        AccessToken = newAccessToken,
+                    };
+                    return response;
+                }
+
+                // Kiểm tra access token expiry
+                var tokenExpiryDate = DateTimeOffset.FromUnixTimeSeconds(tokenCheck.Exp).UtcDateTime;
+                
+                if (tokenExpiryDate > DateTime.UtcNow.AddMinutes(5)) // 5 phút buffer
+                {
+                    // Token còn hạn
+                    response.Success = true;
+                    response.StatusCode = 200;
+                    response.Message = "Token còn hiệu lực";
+                    response.DateTime = DateTime.Now;
+                    return response;
+                }
+
+                // Tạo access token mới
+                var refreshedAccessToken = _jwtAuthService.GenerateToken(userCheck, 60);
+                
+                if (string.IsNullOrEmpty(refreshedAccessToken))
+                {
+                    response.Success = false;
+                    response.StatusCode = 500;
+                    response.Message = "Không thể tạo token mới";
+                    response.DateTime = DateTime.Now;
+                    return response;
+                }
+
+                response.Success = true;
+                response.StatusCode = 201;
+                response.Message = "Làm mới token thành công";
+                response.DateTime = DateTime.Now;
+                response.Data = new UserLoginResponseVM
+                {
+                    Username = tokenCheck.UserName,
+                    RefreshToken = refreshToken, // Giữ nguyên refresh token
+                    AccessToken = refreshedAccessToken,
+                };
+                return response;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in RefreshToken: {ex.Message}");
+                response.Success = false;
+                response.StatusCode = 500;
+                response.Message = "Lỗi hệ thống khi làm mới token";
+                response.DateTime = DateTime.Now;
+                return response;
+            }
+        }, 500, "Refresh token thất bại");
     }
 }

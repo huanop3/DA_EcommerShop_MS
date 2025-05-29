@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace MainEcommerceService.Models.dbMainEcommer;
+namespace ProductService.Models.dbProduct;
 
 public partial class Promotion
 {

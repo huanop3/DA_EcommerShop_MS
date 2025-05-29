@@ -13,8 +13,6 @@ public partial class Product
 
     public string? Description { get; set; }
 
-    public string? ProductTags { get; set; }
-
     public decimal Price { get; set; }
 
     public decimal? DiscountPrice { get; set; }
@@ -29,9 +27,9 @@ public partial class Product
 
     public bool? IsDeleted { get; set; }
 
-    public virtual Category Category { get; set; } = null!;
+    public int SellerId { get; set; }
 
-    public virtual ICollection<ProductEvent> ProductEvents { get; set; } = new List<ProductEvent>();
+    public virtual Category Category { get; set; } = null!;
 
     public virtual ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
 

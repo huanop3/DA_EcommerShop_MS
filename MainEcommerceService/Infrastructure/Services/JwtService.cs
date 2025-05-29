@@ -37,11 +37,15 @@ public class JwtAuthService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Unique ID của token
             new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()) // Thời gian tạo token
         };
-        
+        //Lấy những role chưa bị xóa
+        var userRoles = _context.UserRoles
+            .Where(ur => ur.UserId == userLogin.UserId && ur.Role.IsDeleted == false)
+            .Select(ur => ur.Role.RoleName)
+            .ToList();
         // Add role claims
-        foreach (var userRole in userLogin.UserRoles)
+        foreach (var userRole in userRoles)
         {
-            claims.Add(new Claim(ClaimTypes.Role, userRole.Role.RoleName));
+            claims.Add(new Claim(ClaimTypes.Role, userRole));
         }
         // foreach (var role in userRoles)
         // {

@@ -8,7 +8,9 @@ public interface IUnitOfWork : IAsyncDisposable
     public IRoleRepository _roleRepository { get; }
     public IClientRepository _clientRepository { get; }
     public ILoginLogRepository _loginLogRepository { get; }
-    public ICategoryRepository _categoryRepository { get; }
+    public ICouponRepository _couponRepository { get; }
+    public IAddressRepository _addressRepository { get; }
+    public ISellerProfileRepository _sellerProfileRepository { get; }
     public IRefreshTokenRepository _refreshTokenRepository { get; }
     Task BeginTransaction();
     Task CommitTransaction();
@@ -24,12 +26,15 @@ public class UnitOfWork : IUnitOfWork
     public IRoleRepository _roleRepository { get; }
     public IClientRepository _clientRepository { get; }
     public ILoginLogRepository _loginLogRepository { get; }
-    public ICategoryRepository _categoryRepository { get; }
+    public ICouponRepository _couponRepository { get; }
+    // public ICategoryRepository _categoryRepository { get; }
     public IRefreshTokenRepository _refreshTokenRepository { get; }
+    public IAddressRepository _addressRepository { get; }
+    public ISellerProfileRepository _sellerProfileRepository { get; }
 
     private readonly MainEcommerDBContext  _context;
 
-    public UnitOfWork(MainEcommerDBContext context, IUserRepository userRepository, IUserRoleRepository userRoleRepository, IRoleRepository roleRepository, IClientRepository clientRepository, ILoginLogRepository loginLogRepository, IRefreshTokenRepository refreshTokenRepository, ICategoryRepository categoryRepository)
+    public UnitOfWork(MainEcommerDBContext context, IUserRepository userRepository, IUserRoleRepository userRoleRepository, IRoleRepository roleRepository, IClientRepository clientRepository, ILoginLogRepository loginLogRepository, ICouponRepository couponRepository, IRefreshTokenRepository refreshTokenRepository, IAddressRepository addressRepository, ISellerProfileRepository sellerProfileRepository)
     {
         _context = context;
         _userRepository = userRepository;
@@ -37,8 +42,10 @@ public class UnitOfWork : IUnitOfWork
         _roleRepository = roleRepository;
         _clientRepository = clientRepository;
         _loginLogRepository = loginLogRepository;
+        _couponRepository = couponRepository;
         _refreshTokenRepository = refreshTokenRepository;
-        _categoryRepository = categoryRepository;
+        _addressRepository = addressRepository;
+        _sellerProfileRepository = sellerProfileRepository;
     }
     public async Task BeginTransaction()
     {

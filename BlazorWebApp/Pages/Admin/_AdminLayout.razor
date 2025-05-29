@@ -1,8 +1,10 @@
 @inherits LayoutComponentBase
+@using Blazored.LocalStorage
 @using MudBlazor
-@inject LoginService LoginService
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthStateProvider
+@inject ILocalStorageService _localStorage
 
 <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
 
@@ -22,45 +24,48 @@
 
         <!-- Header Icons Group -->
         <div style="display: flex; align-items: center; gap: 10px;">
-            <!-- Notification Icon with Badge -->
-            @* <div style="position: relative; display: inline-block;">
-                <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" Size="Size.Medium" />
-                <MudBadge Content="3" Color="Color.Error" Overlap="true" Bordered="false"
-                    Style="position: absolute; top: 5px; right: 5px; transform: translate(25%, -25%);" />
-            </div> *@
-
             <!-- Avatar Menu -->
-            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
-                <ActivatorContent>
-                    <div class="d-flex align-center" style="gap: 8px; cursor: pointer;">
-                        <MudBadge Overlap="true" Color="Color.Success" Dot="true" Class="mx-2" Style="cursor: pointer;">
-                            <MudAvatar Color="Color.Secondary" Style="background-color: #4B5966;">
-                                @if (!string.IsNullOrEmpty(UserName))
-                                {
-                                    @UserName[0].ToString().ToUpper()
-                                }
-                                else
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Person" />
-                                }
-                            </MudAvatar>
-                        </MudBadge>
-                        <div class="d-none d-sm-flex flex-column">
-                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">Welcome,
-                            </MudText>
-                            <MudText Typo="Typo.body2">@UserName</MudText>
-                        </div>
+            <AuthorizeView>
+                <Authorized>
+                    <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                        <ActivatorContent>
+                            <div class="d-flex align-center" style="gap: 8px; cursor: pointer;">
+                                <MudBadge Overlap="true" Color="Color.Success" Dot="true" Class="mx-2" Style="cursor: pointer;">
+                                    <MudAvatar Color="Color.Secondary" Style="background-color: #4B5966;">
+                                        @if (!string.IsNullOrEmpty(GetDisplayName(context.User)))
+                                        {
+                                            @GetDisplayName(context.User)[0].ToString().ToUpper()
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" />
+                                        }
+                                    </MudAvatar>
+                                </MudBadge>
+                                <div class="d-none d-sm-flex flex-column">
+                                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">Welcome,
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">@GetDisplayName(context.User)</MudText>
+                                </div>
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudList T="string" Dense="true" DisablePadding="true" Style="">
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Person" Text="Profile"
+                                    OnClick="NavigateToProfile" />
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Logout" Text="Logout"
+                                    OnClick="HandleLogout" />
+                            </MudList>
+                        </ChildContent>
+                    </MudMenu>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="d-flex align-center">
+                        <MudText Typo="Typo.body2">Not Authenticated</MudText>
+                        <MudButton Href="/login" Color="Color.Secondary" Variant="Variant.Text">Login</MudButton>
                     </div>
-                </ActivatorContent>
-                <ChildContent>
-                    <MudList T="string" Dense="true" DisablePadding="true" Style="">
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.Person" Text="Profile"
-                            OnClick="NavigateToProfile" />
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.Logout" Text="Logout"
-                            OnClick="HandleLogout" />
-                    </MudList>
-                </ChildContent>
-            </MudMenu>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
     </MudAppBar>
 
@@ -75,11 +80,11 @@
             <AuthorizeView Roles="Admin">
                 <Authorized>
                     <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
+                    <MudNavLink Href="/admin/sellers" Icon="@Icons.Material.Filled.Sell">Sellers</MudNavLink>
                     <MudNavLink Href="/admin/categories" Icon="@Icons.Material.Filled.Category">Categories</MudNavLink>
                     <MudNavLink Href="/admin/coupons" Icon="@Icons.Material.Filled.LocalOffer">Coupons</MudNavLink>
                 </Authorized>
             </AuthorizeView>
-            @* <MudNavLink Href="/admin/roles" Icon="@Icons.Material.Filled.ManageAccounts">Roles</MudNavLink> *@
             <AuthorizeView Roles="Seller">
                 <Authorized>
                     <MudNavLink Href="/admin/products" Icon="@Icons.Material.Filled.Inventory">Products</MudNavLink>
@@ -95,7 +100,21 @@
 
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.False" Class="py-4 px-4">
-            @Body
+            <AuthorizeView>
+                <Authorized>
+                    @Body
+                </Authorized>
+                <NotAuthorized>
+                    <div class="d-flex flex-column align-center justify-center" style="height: 50vh;">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size: 4rem; color: #999;" />
+                        <MudText Typo="Typo.h5" Class="mt-4">Access Denied</MudText>
+                        <MudText Typo="Typo.body1" Class="mt-2">You need to be logged in to access this page.</MudText>
+                        <MudButton Href="/login" Color="Color.Primary" Variant="Variant.Filled" Class="mt-4">
+                            Go to Login
+                        </MudButton>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
         </MudContainer>
     </MudMainContent>
 </MudLayout>
@@ -148,46 +167,26 @@
         }
     };
 
-    private string UserName { get; set; } = string.Empty;
-    private bool IsAuthenticated { get; set; } = false;
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // Gọi JS interop sau khi component đã render
-            await CheckAuthenticationStatus();
-            StateHasChanged();
-
-        }
-    }
-    private async Task CheckAuthenticationStatus()
-    {
-        try
-        {
-            IsAuthenticated = await LoginService.CheckAuthenticationStatus();
-            if (IsAuthenticated)
-            {
-                UserName = await LoginService.GetUserName();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Authentication error: {ex.Message}");
-        }
-    }
+    // ✅ Remove all manual authentication fields and methods
+    // AuthorizeView handles everything automatically
 
     private async Task HandleLogout()
     {
         try
         {
-            await LoginService.Logout();
+            // Clear authentication data
+            await _localStorage.RemoveItemAsync("token");
+            await _localStorage.RemoveItemAsync("refreshToken");
+            
             NavigationManager.NavigateTo("/login", true);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Logout error: {ex.Message}");
+            NavigationManager.NavigateTo("/login", true);
         }
     }
+
     private void NavigateToProfile()
     {
         NavigationManager.NavigateTo("/profile", true);
@@ -196,6 +195,23 @@
     private void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    /// <summary>
+    /// Extract display name from ClaimsPrincipal
+    /// </summary>
+    private string GetDisplayName(ClaimsPrincipal user)
+    {
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            var username = user.FindFirst("unique_name")?.Value 
+                        ?? user.FindFirst("username")?.Value 
+                        ?? user.FindFirst("sub")?.Value 
+                        ?? user.Identity.Name 
+                        ?? "User";
+            return username;
+        }
+        return "Guest";
     }
 
     public void Dispose()

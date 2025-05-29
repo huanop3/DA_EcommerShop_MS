@@ -15,26 +15,11 @@ namespace BlazorWebApp.Services
             _localStorage = localStorage;
         }
 
-        private async Task SetAuthorizationHeader()
-        {
-            var token = await _localStorage.GetItemAsStringAsync("token");
-            if (string.IsNullOrEmpty(token))
-            {
-                // Nếu không có token, thử refresh
-                token = await _localStorage.GetItemAsStringAsync("refreshToken");
-            }
 
-            if (!string.IsNullOrEmpty(token))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            }
-        }
 
         public async Task<IEnumerable<CategoryVM>> GetAllCategoriesAsync()
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.GetAsync($"http://localhost:5166/api/Category/GetAllCategories");
+            var response = await _httpClient.GetAsync($"http://localhost:5079/api/Category/GetAllCategories");
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<IEnumerable<CategoryVM>>>();
             if (result != null)
@@ -46,8 +31,7 @@ namespace BlazorWebApp.Services
 
         public async Task<CategoryVM> GetCategoryByIdAsync(int id)
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.GetAsync($"http://localhost:5166/api/Category/GetCategoryById/{id}");
+            var response = await _httpClient.GetAsync($"http://localhost:5079/api/Category/GetCategoryById/{id}");
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<CategoryVM>>();
             if (result != null)
@@ -59,8 +43,7 @@ namespace BlazorWebApp.Services
 
         public async Task<bool> CreateCategoryAsync(CategoryVM category)
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.PostAsJsonAsync($"http://localhost:5166/api/Category/CreateCategory", category);
+            var response = await _httpClient.PostAsJsonAsync($"http://localhost:5079/api/Category/CreateCategory", category);
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
             if (result != null)
@@ -72,8 +55,7 @@ namespace BlazorWebApp.Services
 
         public async Task<bool> UpdateCategoryAsync(int id, CategoryVM category)
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.PutAsJsonAsync($"http://localhost:5166/api/Category/UpdateCategory/{id}", category);
+            var response = await _httpClient.PutAsJsonAsync($"http://localhost:5079/api/Category/UpdateCategory/{id}", category);
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
             if (result != null)
@@ -85,8 +67,7 @@ namespace BlazorWebApp.Services
 
         public async Task<bool> DeleteCategoryAsync(int id)
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.DeleteAsync($"http://localhost:5166/api/Category/DeleteCategory/{id}");
+            var response = await _httpClient.DeleteAsync($"http://localhost:5079/api/Category/DeleteCategory/{id}");
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
             if (result != null)

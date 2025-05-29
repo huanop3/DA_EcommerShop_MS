@@ -1,10 +1,28 @@
 @page "/admin/coupons"
+@using BlazorWebApp.Pages.Admin.Dialogs
+@using Microsoft.AspNetCore.Authorization
 @using MudBlazor
+@using BlazorWebApp.Services
+@using MainEcommerceService.Models.ViewModel
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject CouponService CouponService
+@inject SignalRService SignalRService
 @layout _AdminLayout
+@attribute [Authorize(Roles = "Admin")]
 
 <PageTitle>Coupons Management - Grabit</PageTitle>
 
 <MudGrid>
+    <MudItem xs="12">
+        <MudPaper Elevation="0" Class="d-flex align-center justify-space-between pa-4"
+            Style="background-color: white; border-radius: 4px;">
+            <MudText Typo="Typo.h4">Coupons</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mt-4">
     <MudItem xs="12" md="7">
         <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
             <div class="d-flex align-center justify-space-between mb-4">
@@ -13,34 +31,42 @@
                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
                              Immediate="true" Class="ml-auto mr-2" Style="max-width: 300px;" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
-                          OnClick="@(() => selectedCoupon = new CouponModel())">Add Coupon</MudButton>
+                          OnClick="@(() => OpenCreateDialog())">Add Coupon</MudButton>
             </div>
             
             <MudTable Items="@FilteredCoupons" Dense="false" Hover="true" Bordered="false" Striped="false" 
                      Loading="@isLoading" LoadingProgressColor="Color.Primary" FixedHeader="true" Height="calc(100vh - 250px)"
-                     Class="mt-3">
+                     Class="mt-3" @bind-RowsPerPage="pageSize">
                 <HeaderContent>
-                    <MudTh Style="width: 120px">Code</MudTh>
-                    <MudTh Style="width: 120px">Discount</MudTh>
-                    <MudTh Style="width: 180px">Validity</MudTh>
-                    <MudTh Style="width: 100px">Usage</MudTh>
-                    <MudTh Style="width: 120px">Status</MudTh>
+                    <MudTh>Code</MudTh>
+                    <MudTh>Discount</MudTh>
+                    <MudTh>Validity</MudTh>
+                    <MudTh>Usage</MudTh>
+                    <MudTh>Status</MudTh>
                     <MudTh Style="width: 100px; text-align: center">Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Code">
                         <MudChip T="string" Color="Color.Primary" Size="Size.Small" Style="font-family: monospace;">
-                            @context.Code
+                            @context.CouponCode
                         </MudChip>
                     </MudTd>
                     <MudTd DataLabel="Discount">
-                        @if (context.DiscountType == "Percentage")
+                        @if (context.DiscountPercent.HasValue)
                         {
-                            <span>@context.DiscountValue%</span>
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                                @context.DiscountPercent.Value%
+                            </MudChip>
+                        }
+                        else if (context.DiscountAmount.HasValue)
+                        {
+                            <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                                $@context.DiscountAmount.Value.ToString("F2")
+                            </MudChip>
                         }
                         else
                         {
-                            <span>$@context.DiscountValue.ToString("F2")</span>
+                            <MudText Typo="Typo.body2">No discount</MudText>
                         }
                     </MudTd>
                     <MudTd DataLabel="Validity">
@@ -50,7 +76,13 @@
                         </div>
                     </MudTd>
                     <MudTd DataLabel="Usage">
-                        <MudText Typo="Typo.body2">@context.UsedCount / @(context.MaxUses == 0 ? "∞" : context.MaxUses.ToString())</MudText>
+                        <MudText Typo="Typo.body2">
+                            @(context.UsageCount ?? 0) / @(context.UsageLimit?.ToString() ?? "∞")
+                        </MudText>
+                        @if (context.UsageLimit.HasValue && context.UsageCount >= context.UsageLimit)
+                        {
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Small">Exhausted</MudChip>
+                        }
                     </MudTd>
                     <MudTd DataLabel="Status">
                         <MudChip T="string" Color="@GetStatusColor(context)" Size="Size.Small" Variant="Variant.Filled">
@@ -59,14 +91,27 @@
                     </MudTd>
                     <MudTd DataLabel="Actions">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" 
-                                     OnClick="@(() => selectedCoupon = context)" />
+                                     OnClick="@(() => OpenEditDialog(context))" />
+                        @if (context.IsActive == true)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Stop" Size="Size.Small" Color="Color.Warning" 
+                                         OnClick="@(() => DeactivateCoupon(context))" Title="Deactivate" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Color="Color.Success" 
+                                         OnClick="@(() => ActivateCoupon(context))" Title="Activate" />
+                        }
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" 
-                                     OnClick="@(() => DeleteCoupon(context))" />
+                                     OnClick="@(() => ConfirmDeleteCoupon(context))" />
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
-                    <MudTablePager PageSizeOptions="new int[] {10, 25, 50}" />
+                    <MudTablePager PageSizeOptions="new int[] {5, 10, 25, 50}" />
                 </PagerContent>
+                <NoRecordsContent>
+                    <MudText>No coupons found</MudText>
+                </NoRecordsContent>
             </MudTable>
         </MudPaper>
     </MudItem>
@@ -74,56 +119,61 @@
     <MudItem xs="12" md="5">
         <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
             <MudText Typo="Typo.h5" Class="mb-4">
-                @(selectedCoupon?.Id == null ? "Add New Coupon" : "Edit Coupon")
+                @(selectedCoupon?.CouponId == 0 ? "Add New Coupon" : "Edit Coupon")
             </MudText>
             
             @if (selectedCoupon != null)
             {
-                <MudForm @ref="form" @bind-IsValid="@isValid">
+                <MudForm @ref="form" @bind-IsValid="@isValid" Model="selectedCoupon">
                     <MudGrid>
-                        <MudItem xs="12">
-                            <MudTextField @bind-Value="selectedCoupon.Code" Label="Coupon Code" Required="true" RequiredError="Coupon code is required" />
-                        </MudItem>
-                        
-                        <MudItem xs="6">
-                            <MudSelect T="string" @bind-Value="selectedCoupon.DiscountType" Label="Discount Type" Required="true">
-                                <MudSelectItem Value="@("Percentage")">Percentage (%)</MudSelectItem>
-                                <MudSelectItem Value="@("Fixed")">Fixed Amount ($)</MudSelectItem>
-                            </MudSelect>
-                        </MudItem>
-                        
-                        <MudItem xs="6">
-                            <MudNumericField @bind-Value="selectedCoupon.DiscountValue" Label="Value" Required="true" Min="0" />
-                        </MudItem>
-                        
-                        <MudItem xs="6">
-                            <MudDatePicker Date="selectedCoupon.StartDate" DateChanged="@((DateTime? date) => selectedCoupon.StartDate = date.GetValueOrDefault())" Label="Start Date" Required="true" />
-                        </MudItem>
-                        
-                        <MudItem xs="6">
-                            <MudDatePicker Date="selectedCoupon.EndDate" DateChanged="@((DateTime? date) => selectedCoupon.EndDate = date.GetValueOrDefault())" Label="End Date" Required="true" />
-                        </MudItem>
-                        
-                        <MudItem xs="6">
-                            <MudNumericField @bind-Value="selectedCoupon.MinimumSpend" Label="Minimum Spend" Min="0" />
-                        </MudItem>
-                        
-                        <MudItem xs="6">
-                            <MudNumericField @bind-Value="selectedCoupon.MaxUses" Label="Maximum Uses (0 = unlimited)" Min="0" />
+                        <MudItem xs="12" Class="d-flex justify-center">
+                            <MudAvatar Color="Color.Primary" Size="Size.Large" Class="mb-3">
+                                <MudIcon Icon="@Icons.Material.Filled.LocalOffer" Size="Size.Large" />
+                            </MudAvatar>
                         </MudItem>
                         
                         <MudItem xs="12">
-                            <MudTextField @bind-Value="selectedCoupon.Description" Label="Description" Lines="2" />
+                            <MudTextField @bind-Value="selectedCoupon.CouponCode" Label="Coupon Code" Required="true" 
+                                        RequiredError="Coupon code is required" MaxLength="50" />
                         </MudItem>
                         
                         <MudItem xs="12">
-                            <MudSwitch T="bool" @bind-Checked="selectedCoupon.IsActive" Label="Active" Color="Color.Primary" />
+                            <MudTextField @bind-Value="selectedCoupon.Description" Label="Description" Lines="2" MaxLength="500" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudNumericField @bind-Value="selectedCoupon.DiscountPercent" Label="Discount Percent (%)" 
+                                           Min="0" Max="100" HideSpinButtons="false" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudNumericField @bind-Value="selectedCoupon.DiscountAmount" Label="Discount Amount ($)" 
+                                           Min="0" HideSpinButtons="false" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudDatePicker Date="selectedCoupon.StartDate" DateChanged="(DateTime? date) => { selectedCoupon.StartDate = date ?? DateTime.Now; }" Label="Start Date" Required="true" DateFormat="yyyy-MM-dd" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudDatePicker Date="selectedCoupon.EndDate" DateChanged="(DateTime? date) => { selectedCoupon.EndDate = date ?? DateTime.Now; }" 
+                                          Label="End Date" Required="true" DateFormat="yyyy-MM-dd" />
+                        </MudItem>
+                        
+
+                        <MudItem xs="12">
+                            <MudNumericField @bind-Value="selectedCoupon.UsageLimit" Label="Usage Limit (leave empty for unlimited)" 
+                                           Min="1" HideSpinButtons="false" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudSwitch T="bool" @bind-Value="isActiveSwitch" Label="Active" Color="Color.Primary" />
                         </MudItem>
                         
                         <MudItem xs="12" Class="d-flex justify-space-between mt-4">
                             <MudButton Variant="Variant.Outlined" OnClick="@(() => selectedCoupon = null)">Cancel</MudButton>
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid)" OnClick="SaveCoupon">
-                                @(selectedCoupon.Id == null ? "Create Coupon" : "Update Coupon")
+                                @(selectedCoupon.CouponId == 0 ? "Create Coupon" : "Update Coupon")
                             </MudButton>
                         </MudItem>
                     </MudGrid>
@@ -142,93 +192,124 @@
 </MudGrid>
 
 @code {
-    private bool isLoading = false;
+    private bool isLoading = true;
     private bool isValid = false;
+    private bool isActiveSwitch = true;
     private string searchString = "";
-    private CouponModel selectedCoupon = null;
+    private CouponVM selectedCoupon = null;
     private MudForm form;
+    private int pageSize = 10;
     
-    private List<CouponModel> coupons = new List<CouponModel>
-    {
-        new CouponModel 
-        { 
-            Id = "CPN-001", 
-            Code = "WELCOME25", 
-            DiscountType = "Percentage", 
-            DiscountValue = 25, 
-            MinimumSpend = 50,
-            MaxUses = 100,
-            UsedCount = 45,
-            IsActive = true,
-            StartDate = DateTime.Now.AddDays(-30),
-            EndDate = DateTime.Now.AddDays(60),
-            Description = "Welcome discount for new customers"
-        },
-        new CouponModel 
-        { 
-            Id = "CPN-002", 
-            Code = "SUMMER2023", 
-            DiscountType = "Percentage", 
-            DiscountValue = 15, 
-            MinimumSpend = 25,
-            MaxUses = 0,
-            UsedCount = 136,
-            IsActive = true,
-            StartDate = DateTime.Now.AddDays(-10),
-            EndDate = DateTime.Now.AddDays(50),
-            Description = "Summer special discount"
-        },
-        new CouponModel 
-        { 
-            Id = "CPN-003", 
-            Code = "FREESHIP", 
-            DiscountType = "Fixed", 
-            DiscountValue = 10, 
-            MinimumSpend = 40,
-            MaxUses = 200,
-            UsedCount = 78,
-            IsActive = true,
-            StartDate = DateTime.Now.AddDays(-20),
-            EndDate = DateTime.Now.AddDays(10),
-            Description = "Free shipping coupon"
-        },
-        new CouponModel 
-        { 
-            Id = "CPN-004", 
-            Code = "WINTER2022", 
-            DiscountType = "Percentage", 
-            DiscountValue = 20, 
-            MinimumSpend = 30,
-            MaxUses = 150,
-            UsedCount = 150,
-            IsActive = false,
-            StartDate = DateTime.Now.AddDays(-90),
-            EndDate = DateTime.Now.AddDays(-30),
-            Description = "Winter special discount"
-        }
-    };
+    private List<CouponVM> coupons = new List<CouponVM>();
 
-    private IEnumerable<CouponModel> FilteredCoupons => coupons
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCouponsAsync();
+        await InitializeSignalRAsync();
+    }
+
+    private async Task InitializeSignalRAsync()
+    {
+        try
+        {
+            // Subscribe to SignalR events
+            SignalRService.CouponCreated += OnCouponCreated;
+            SignalRService.CouponUpdated += OnCouponUpdated;
+            SignalRService.CouponDeleted += OnCouponDeleted;
+            SignalRService.CouponStatusChanged += OnCouponStatusChanged;
+
+            // Start connection if not already connected
+            if (!SignalRService.IsConnected)
+            {
+                await SignalRService.StartConnectionAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing SignalR: {ex.Message}");
+        }
+    }
+
+    private async void OnCouponCreated(string couponCode)
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadCouponsAsync();
+            Snackbar.Add($"New coupon '{couponCode}' created by another admin", Severity.Info);
+            StateHasChanged();
+        });
+    }
+
+    private async void OnCouponUpdated(int couponId, string couponCode)
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadCouponsAsync();
+            Snackbar.Add($"Coupon '{couponCode}' updated by another admin", Severity.Info);
+            StateHasChanged();
+        });
+    }
+
+    private async void OnCouponDeleted(int couponId)
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadCouponsAsync();
+            Snackbar.Add("A coupon was deleted by another admin", Severity.Info);
+            StateHasChanged();
+        });
+    }
+
+    private async void OnCouponStatusChanged(int couponId, string status)
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadCouponsAsync();
+            Snackbar.Add($"A coupon status changed to {status} by another admin", Severity.Info);
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadCouponsAsync()
+    {
+        try
+        {
+            isLoading = true;
+            var fetchedCoupons = await CouponService.GetAllCouponsAsync();
+            if (fetchedCoupons != null)
+            {
+                coupons = fetchedCoupons.Where(c => c.IsDeleted != true).ToList();
+            }
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading coupons: {ex.Message}", Severity.Error);
+            isLoading = false;
+        }
+    }
+
+    private IEnumerable<CouponVM> FilteredCoupons => coupons
         .Where(c => string.IsNullOrWhiteSpace(searchString) || 
-                   c.Code.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-                   c.Description.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                   c.CouponCode.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                   (c.Description?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false))
         .OrderByDescending(c => c.IsActive)
         .ThenByDescending(c => c.EndDate);
 
-    private string GetStatus(CouponModel coupon)
+    private string GetStatus(CouponVM coupon)
     {
-        if (!coupon.IsActive)
+        if (coupon.IsActive != true)
             return "Inactive";
         if (coupon.EndDate < DateTime.Now)
             return "Expired";
         if (coupon.StartDate > DateTime.Now)
             return "Upcoming";
-        if (coupon.MaxUses > 0 && coupon.UsedCount >= coupon.MaxUses)
+        if (coupon.UsageLimit.HasValue && coupon.UsageCount >= coupon.UsageLimit)
             return "Exhausted";
         return "Active";
     }
 
-    private Color GetStatusColor(CouponModel coupon)
+    private Color GetStatusColor(CouponVM coupon)
     {
         string status = GetStatus(coupon);
         return status switch
@@ -242,42 +323,249 @@
         };
     }
 
-    private void SaveCoupon()
+    private void OpenCreateDialog()
     {
-        if (selectedCoupon.Id == null)
+        selectedCoupon = new CouponVM
         {
-            // Add new coupon
-            selectedCoupon.Id = $"CPN-{(coupons.Count + 1):000}";
-            coupons.Add(selectedCoupon);
-        }
-        else
+            CouponId = 0,
+            CouponCode = "",
+            Description = "",
+            StartDate = DateTime.Now,
+            EndDate = DateTime.Now.AddMonths(1),
+            CreatedAt = DateTime.Now,
+            IsActive = true,
+            IsDeleted = false,
+            UsageCount = 0
+        };
+        isActiveSwitch = true;
+    }
+
+    private void OpenEditDialog(CouponVM coupon)
+    {
+        selectedCoupon = new CouponVM
         {
-            // Update existing coupon
-            var index = coupons.FindIndex(c => c.Id == selectedCoupon.Id);
-            if (index >= 0)
-                coupons[index] = selectedCoupon;
+            CouponId = coupon.CouponId,
+            CouponCode = coupon.CouponCode,
+            Description = coupon.Description,
+            DiscountPercent = coupon.DiscountPercent,
+            DiscountAmount = coupon.DiscountAmount,
+            StartDate = coupon.StartDate,
+            EndDate = coupon.EndDate,
+            CreatedAt = coupon.CreatedAt,
+            UpdatedAt = coupon.UpdatedAt,
+            IsActive = coupon.IsActive,
+            IsDeleted = coupon.IsDeleted,
+            UsageLimit = coupon.UsageLimit,
+            UsageCount = coupon.UsageCount
+        };
+        isActiveSwitch = coupon.IsActive == true;
+    }
+
+    private async Task SaveCoupon()
+    {
+        try
+        {
+            selectedCoupon.IsActive = isActiveSwitch;
+            bool success = false;
+            bool isCreating = selectedCoupon.CouponId == 0;
+            string couponCode = selectedCoupon.CouponCode;
+            
+            if (isCreating)
+            {
+                // Create new coupon
+                success = await CouponService.CreateCouponAsync(selectedCoupon);
+                if (success)
+                {
+                    Snackbar.Add("Coupon created successfully!", Severity.Success);
+                    
+                    // Send SignalR notification (don't wait)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await SignalRService.NotifyCouponCreatedAsync(couponCode);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"SignalR notification failed: {ex.Message}");
+                        }
+                    });
+                }
+            }
+            else
+            {
+                // Update existing coupon
+                selectedCoupon.UpdatedAt = DateTime.Now;
+                success = await CouponService.UpdateCouponAsync(selectedCoupon);
+                if (success)
+                {
+                    Snackbar.Add("Coupon updated successfully!", Severity.Success);
+                    
+                    // Send SignalR notification (don't wait)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await SignalRService.NotifyCouponUpdatedAsync(selectedCoupon.CouponId, couponCode);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"SignalR notification failed: {ex.Message}");
+                        }
+                    });
+                }
+            }
+
+            if (success)
+            {
+                await LoadCouponsAsync();
+                selectedCoupon = null;
+            }
+            else
+            {
+                Snackbar.Add("Operation failed!", Severity.Error);
+            }
         }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving coupon: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ActivateCoupon(CouponVM coupon)
+    {
+        try
+        {
+            var success = await CouponService.ActivateCouponAsync(coupon.CouponId);
+            if (success)
+            {
+                Snackbar.Add($"Coupon '{coupon.CouponCode}' activated successfully!", Severity.Success);
+                
+                // Send SignalR notification (don't wait)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SignalRService.NotifyCouponStatusChangedAsync(coupon.CouponId, "Activated");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"SignalR notification failed: {ex.Message}");
+                    }
+                });
+                
+                await LoadCouponsAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to activate coupon!", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error activating coupon: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeactivateCoupon(CouponVM coupon)
+    {
+        try
+        {
+            var success = await CouponService.DeactivateCouponAsync(coupon.CouponId);
+            if (success)
+            {
+                Snackbar.Add($"Coupon '{coupon.CouponCode}' deactivated successfully!", Severity.Success);
+                
+                // Send SignalR notification (don't wait)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SignalRService.NotifyCouponStatusChangedAsync(coupon.CouponId, "Deactivated");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"SignalR notification failed: {ex.Message}");
+                    }
+                });
+                
+                await LoadCouponsAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to deactivate coupon!", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deactivating coupon: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ConfirmDeleteCoupon(CouponVM coupon)
+    {
+        var parameters = new DialogParameters
+        {
+            ["ContentText"] = $"Are you sure you want to delete the coupon '{coupon.CouponCode}'? This action cannot be undone.",
+            ["ButtonText"] = "Delete",
+            ["Color"] = Color.Error
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete Coupon", parameters, options);
+        var result = await dialog.Result;
         
-        selectedCoupon = null;
+        if (!result.Canceled)
+        {
+            await DeleteCoupon(coupon);
+        }
     }
 
-    private void DeleteCoupon(CouponModel coupon)
+    private async Task DeleteCoupon(CouponVM coupon)
     {
-        coupons.Remove(coupon);
+        try
+        {
+            var success = await CouponService.DeleteCouponAsync(coupon.CouponId);
+            if (success)
+            {
+                Snackbar.Add($"Coupon '{coupon.CouponCode}' deleted successfully!", Severity.Success);
+                
+                // Send SignalR notification (don't wait)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SignalRService.NotifyCouponDeletedAsync(coupon.CouponId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"SignalR notification failed: {ex.Message}");
+                    }
+                });
+                
+                await LoadCouponsAsync();
+                if (selectedCoupon?.CouponId == coupon.CouponId)
+                {
+                    selectedCoupon = null;
+                }
+            }
+            else
+            {
+                Snackbar.Add("Failed to delete coupon!", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting coupon: {ex.Message}", Severity.Error);
+        }
     }
 
-    public class CouponModel
+    public void Dispose()
     {
-        public string Id { get; set; }
-        public string Code { get; set; }
-        public string DiscountType { get; set; } = "Percentage";
-        public double DiscountValue { get; set; }
-        public double MinimumSpend { get; set; }
-        public int MaxUses { get; set; }
-        public int UsedCount { get; set; }
-        public DateTime StartDate { get; set; } = DateTime.Now;
-        public DateTime EndDate { get; set; } = DateTime.Now.AddMonths(1);
-        public string Description { get; set; } = "";
-        public bool IsActive { get; set; } = true;
+        // Unsubscribe from SignalR events
+        SignalRService.CouponCreated -= OnCouponCreated;
+        SignalRService.CouponUpdated -= OnCouponUpdated;
+        SignalRService.CouponDeleted -= OnCouponDeleted;
+        SignalRService.CouponStatusChanged -= OnCouponStatusChanged;
     }
 }

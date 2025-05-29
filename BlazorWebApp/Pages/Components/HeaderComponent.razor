@@ -6,37 +6,6 @@
 
 
 <header class="@(_mobileMenuOpen ? "mobile-menu-is-active" : "")">
-
-    <!-- Top Bar -->
-    <div class="topbar">
-        <div class="container1">
-            <div class="topbar-left">
-                <a href="tel:+919876543210" class="contact-item">
-                    <i class="phone-icon"></i>
-                    <span>+91 987 654 3210</span>
-                </a>
-                <a href="tel:+919876543210" class="contact-item">
-                    <i class="phone-icon"></i>
-                    <span>+91 987 654 3210</span>
-                </a>
-            </div>
-            <div class="topbar-center">
-                <span>World's Fastest Online Shopping Destination</span>
-            </div>
-            <div class="topbar-right">
-                <a href="#">Help?</a>
-                <a href="#">Track Order?</a>
-                <div class="dropdown">
-                    <button>English <i class="arrow-down"></i></button>
-                </div>
-                <div class="dropdown">
-
-                    <button>Dollar <i class="arrow-down"></i></button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Main Header -->
     <div class="main-header">
         <div class="container1">
@@ -55,62 +24,91 @@
                 </button>
             </div>
 
-            <div class="header-actions">
-                @if (IsAuthenticated)
-                {
-                    <div class="action-item user-dropdown" @onclick="ToggleUserMenu"
-                        style="text-decoration: none; cursor: pointer;">
-                        <div class="action-content">
-                            <span>Hello,</span>
-                            <strong>@UserName</strong>
+            <div class="header-actions">             
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="action-item user-dropdown" @onclick="ToggleUserMenu"
+                            style="text-decoration: none; cursor: pointer;">
+                            <div class="action-content">
+                                <span>Hello,</span>
+                                <strong>@GetDisplayName(context.User)</strong>
+                            </div>
+                            <i class="user-icon"></i>
+                            <div class="user-menu @(isUserMenuOpen ? "active" : "")">
+                                <AuthorizeView Roles="Admin,Seller" Context="innerContext">
+                                    <Authorized>
+                                        <a href="/admin" class="action-item">Dashboard</a>
+                                    </Authorized>
+                                </AuthorizeView>
+                                <a href="/profile">My Profile</a>
+                                <a href="/orders">My Orders</a>
+                                <a href="/addresses">My Addresses</a>
+                                <a href="javascript:void(0)" @onclick="Logout">Logout</a>
+                            </div>
                         </div>
-                        <i class="user-icon"></i>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/login" class="action-item" style="text-decoration: none;">
+                            <div class="action-content">
+                                <span>Account</span>
+                                <strong>LOGIN</strong>
+                            </div>
+                            <i class="user-icon"></i>
+                        </a>
+                    </NotAuthorized>
+                </AuthorizeView>
 
-                        <div class="user-menu @(isUserMenuOpen ? "active" : "")">
-                            <AuthorizeView Roles="Admin,Seller">
-                                <Authorized>
-                                    <a href="/admin" class="action-item">Dashboard</a>
-                                </Authorized>
-                            </AuthorizeView>
-                            <a href="/profile">My Profile</a>
-                            <a href="/orders">My Orders</a>
-                            <a href="/addresses">My Addresses</a>
-                            <a href="javascript:void(0)" @onclick="Logout">Logout</a>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <a href="/login" class="action-item" style="text-decoration: none;">
-                        <div class="action-content">
-                            <span>Account</span>
-                            <strong>LOGIN</strong>
-                        </div>
-                        <i class="user-icon"></i>
-                    </a>
-                }
+                <AuthorizeView>
+                    <Authorized>
+                        <a href="/wishlist" class="action-item" style="text-decoration: none;">
+                            <div class="action-content">
+                                <span>Wishlist</span>
+                                <strong>ITEMS</strong>
+                            </div>
+                            <div class="icon-container">
+                                <i class="heart-icon"></i>
+                                <span class="notification-badge">3</span>
+                            </div>
+                        </a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/login" class="action-item" style="text-decoration: none;">
+                            <div class="action-content">
+                                <span>Wishlist</span>
+                                <strong>LOGIN REQUIRED</strong>
+                            </div>
+                            <div class="icon-container">
+                                <i class="heart-icon"></i>
+                            </div>
+                        </a>
+                    </NotAuthorized>
+                </AuthorizeView>
 
-                <a href="/wishlist" class="action-item" style="text-decoration: none;">
-                    <div class="action-content">
-                        <span>Wishlist</span>
-                        <strong>ITEMS</strong>
-                    </div>
-                    <div class="icon-container">
-                        <i class="heart-icon"></i>
-                        <span class="notification-badge">3</span>
-                    </div>
-                </a>
-
-                <a href="/cart" class="action-item" style="text-decoration: none;">
-                    <div class="action-content">
-                        <span>Cart</span>
-                        <strong>ITEMS</strong>
-                    </div>
-                    <div class="icon-container">
-                        <i class="cart-icon"></i>
-                        <span class="notification-badge">3</span>
-                    </div>
-                </a>
+                <AuthorizeView>
+                    <Authorized>
+                        <a href="/cart" class="action-item" style="text-decoration: none;">
+                            <div class="action-content">
+                                <span>Cart</span>
+                                <strong>ITEMS</strong>
+                            </div>
+                            <div class="icon-container">
+                                <i class="cart-icon"></i>
+                                <span class="notification-badge">3</span>
+                            </div>
+                        </a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/login" class="action-item" style="text-decoration: none;">
+                            <div class="action-content">
+                                <span>Cart</span>
+                                <strong>LOGIN REQUIRED</strong>
+                            </div>
+                            <div class="icon-container">
+                                <i class="cart-icon"></i>
+                            </div>
+                        </a>
+                    </NotAuthorized>
+                </AuthorizeView>
             </div>
         </div>
     </div>
@@ -337,32 +335,39 @@
     private bool IsAuthenticated { get; set; } = false;
     private string UserName { get; set; } = string.Empty;
     private bool isUserMenuOpen { get; set; } = false;
+    private bool _isInitializing = true; // Thêm loading state
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await CheckAuthenticationStatus();
-            await LoginService.RefreshToken();
-            StateHasChanged();
+            await InitializeAuthenticationAsync();
         }
     }
 
-    private async Task CheckAuthenticationStatus()
+    private async Task InitializeAuthenticationAsync()
     {
         try
         {
-            IsAuthenticated = await LoginService.CheckAuthenticationStatus();
+            _isInitializing = true;
+            StateHasChanged(); // Update UI để show loading
 
-            if (IsAuthenticated)
-            {
-                UserName = await LoginService.GetUserName();
-            }
+            // Đợi một chút để đảm bảo DI container đã ready
+            await Task.Delay(100);
+
+            // Kiểm tra authentication status trước
+            IsAuthenticated = await LoginService.CheckAuthenticationStatus();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Lỗi xác thực: {ex.Message}");
+            Console.WriteLine($"Lỗi khởi tạo authentication: {ex.Message}");
             IsAuthenticated = false;
+            UserName = string.Empty;
+        }
+        finally
+        {
+            _isInitializing = false;
+            StateHasChanged(); // Update UI cuối cùng
         }
     }
 
@@ -400,5 +405,19 @@
         {
             _openSubmenu = submenu;
         }
+    }
+        private string GetDisplayName(ClaimsPrincipal user)
+    {
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            // Try different claim types for username
+            var username = user.FindFirst("unique_name")?.Value 
+                        ?? user.FindFirst("username")?.Value 
+                        ?? user.FindFirst("sub")?.Value 
+                        ?? user.Identity.Name 
+                        ?? "User";
+            return username;
+        }
+        return "Guest";
     }
 }

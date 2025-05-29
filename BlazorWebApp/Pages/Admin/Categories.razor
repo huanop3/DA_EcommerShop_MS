@@ -1,10 +1,13 @@
 @page "/admin/categories"
+@using BlazorWebApp.Pages.Admin.Dialogs
 @using Microsoft.AspNetCore.Authorization
 @using MudBlazor
 @using BlazorWebApp.Services
 @using MainEcommerceService.Models.ViewModel
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject CategoryService CategoryService
+@inject SignalRService SignalRService
 @layout _AdminLayout
 @attribute [Authorize(Roles = "Admin")]
 
@@ -59,7 +62,7 @@
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" 
                                      OnClick="@(() => OpenEditDialog(context))" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" 
-                                     OnClick="@(() => DeleteCategory(context))" />
+                                     OnClick="@(() => ConfirmDeleteCategory(context))" />
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
@@ -132,6 +135,58 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadCategoriesAsync();
+        await InitializeSignalRAsync();
+    }
+
+    private async Task InitializeSignalRAsync()
+    {
+        try
+        {
+            // Subscribe to SignalR events
+            SignalRService.CategoryCreated += OnCategoryCreated;
+            SignalRService.CategoryUpdated += OnCategoryUpdated;
+            SignalRService.CategoryDeleted += OnCategoryDeleted;
+
+            // Start connection if not already connected
+            if (!SignalRService.IsConnected)
+            {
+                await SignalRService.StartConnectionAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing SignalR: {ex.Message}");
+        }
+    }
+
+    private async void OnCategoryCreated(string categoryName)
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadCategoriesAsync();
+            Snackbar.Add($"New category '{categoryName}' created by another admin", Severity.Info);
+            StateHasChanged();
+        });
+    }
+
+    private async void OnCategoryUpdated(int categoryId, string categoryName)
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadCategoriesAsync();
+            Snackbar.Add($"Category '{categoryName}' updated by another admin", Severity.Info);
+            StateHasChanged();
+        });
+    }
+
+    private async void OnCategoryDeleted(int categoryId)
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadCategoriesAsync();
+            Snackbar.Add("A category was deleted by another admin", Severity.Info);
+            StateHasChanged();
+        });
     }
 
     private async Task LoadCategoriesAsync()
@@ -214,14 +269,29 @@
         try
         {
             bool success = false;
+            bool isCreating = selectedCategory.CategoryId == 0;
+            string categoryName = selectedCategory.CategoryName;
             
-            if (selectedCategory.CategoryId == 0)
+            if (isCreating)
             {
                 // Create new category
                 success = await CategoryService.CreateCategoryAsync(selectedCategory);
                 if (success)
                 {
                     Snackbar.Add("Category created successfully!", Severity.Success);
+                    
+                    // Send SignalR notification (don't wait)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await SignalRService.NotifyCategoryCreatedAsync(categoryName);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"SignalR notification failed: {ex.Message}");
+                        }
+                    });
                 }
             }
             else
@@ -232,6 +302,19 @@
                 if (success)
                 {
                     Snackbar.Add("Category updated successfully!", Severity.Success);
+                    
+                    // Send SignalR notification (don't wait)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await SignalRService.NotifyCategoryUpdatedAsync(selectedCategory.CategoryId, categoryName);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"SignalR notification failed: {ex.Message}");
+                        }
+                    });
                 }
             }
 
@@ -251,6 +334,25 @@
         }
     }
 
+    private async Task ConfirmDeleteCategory(CategoryVM category)
+    {
+        var parameters = new DialogParameters
+        {
+            ["ContentText"] = $"Are you sure you want to delete the category '{category.CategoryName}'? This action cannot be undone.",
+            ["ButtonText"] = "Delete",
+            ["Color"] = Color.Error
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete Category", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            await DeleteCategory(category);
+        }
+    }
+
     private async Task DeleteCategory(CategoryVM category)
     {
         try
@@ -258,7 +360,21 @@
             var success = await CategoryService.DeleteCategoryAsync(category.CategoryId);
             if (success)
             {
-                Snackbar.Add("Category deleted successfully!", Severity.Success);
+                Snackbar.Add($"Category '{category.CategoryName}' deleted successfully!", Severity.Success);
+                
+                // Send SignalR notification (don't wait)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SignalRService.NotifyCategoryDeletedAsync(category.CategoryId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"SignalR notification failed: {ex.Message}");
+                    }
+                });
+                
                 await LoadCategoriesAsync();
                 if (selectedCategory?.CategoryId == category.CategoryId)
                 {
@@ -274,5 +390,13 @@
         {
             Snackbar.Add($"Error deleting category: {ex.Message}", Severity.Error);
         }
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from SignalR events
+        SignalRService.CategoryCreated -= OnCategoryCreated;
+        SignalRService.CategoryUpdated -= OnCategoryUpdated;
+        SignalRService.CategoryDeleted -= OnCategoryDeleted;
     }
 }

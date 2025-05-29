@@ -14,111 +14,90 @@ namespace BlazorWebApp.Services
             _httpClient = httpClient;
             _localStorage = localStorage;
         }
-        private async Task SetAuthorizationHeader()
-        {
-            var token = await _localStorage.GetItemAsStringAsync("token");
-            if (string.IsNullOrEmpty(token))
-            {
-                // Nếu không có token, thử refresh
-                token = await _localStorage.GetItemAsStringAsync("refreshToken");
-            }
 
-            if (!string.IsNullOrEmpty(token))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            }
-        }
+
         public async Task<IEnumerable<UserVM>> GetAllUserAsync()
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.GetAsync($"http://localhost:5166/api/User/GetAllUser");
+
+            var response = await _httpClient.GetAsync("http://localhost:5166/api/User/GetAllUser");
             response.EnsureSuccessStatusCode();
+            
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<IEnumerable<UserVM>>>();
-            //Lấy ra các user có IsDeleted = false
-            var activeUsers = result.Data.Where(user => user.IsDeleted == false);
-            if (result != null)
-            {
-                userVM = activeUsers;
-            }
+            userVM = result?.Data?.Where(user => user.IsDeleted == false) ?? Enumerable.Empty<UserVM>();
             return userVM;
         }
 
         public async Task<IEnumerable<UserVM>> GetUsersByPageAsync(int pageIndex, int pageSize)
         {
-            await SetAuthorizationHeader();
+
             var response = await _httpClient.GetAsync($"http://localhost:5166/api/User/GetUsersByPage?pageIndex={pageIndex}&pageSize={pageSize}");
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<IEnumerable<UserVM>>>();
-            //Lấy ra các user có IsActive = true
-            var activeUsers = result.Data.Where(user => user.IsActive == true);
-            if (result != null)
-            {
-                userVM = activeUsers;
-            }
+            userVM = result?.Data?.Where(user => user.IsActive == true) ?? Enumerable.Empty<UserVM>();
             return userVM;
         }
+
         public async Task<IEnumerable<RoleVM>> GetAllRoleAsync()
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.GetAsync($"http://localhost:5166/api/User/GetAllRole");
+
+            var response = await _httpClient.GetAsync("http://localhost:5166/api/User/GetAllRole");
             response.EnsureSuccessStatusCode();
+            
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<IEnumerable<RoleVM>>>();
-            if (result != null)
-            {
-                return result.Data;
-            }
-            return null;
+            return result?.Data ?? Enumerable.Empty<RoleVM>();
         }
+
         public async Task<bool> UpdateUserAsync(UserListVM user)
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.PutAsJsonAsync($"http://localhost:5166/api/User/UpdateUser", user);
+
+            var response = await _httpClient.PutAsJsonAsync("http://localhost:5166/api/User/UpdateUser", user);
             response.EnsureSuccessStatusCode();
+            
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
-            if (result != null)
-            {
-                return result.Success;
-            }
-            return result.Success;
+            return result?.Success ?? false;
         }
+
         public async Task<bool> DeleteUserAsync(string id)
         {
-            await SetAuthorizationHeader();
+
             var response = await _httpClient.DeleteAsync($"http://localhost:5166/api/User/DeleteUser?id={id}");
             response.EnsureSuccessStatusCode();
+            
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
-            if (result != null)
-            {
-                return true;
-            }
-            return false;
+            return result?.Success ?? false;
         }
-        public async Task<ProfileVM> GetProfileAsync(string userName)
+
+        public async Task<ProfileVM> GetProfileAsync(int id)
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.GetAsync($"http://localhost:5166/api/User/GetUserProfile?userName={userName}");
-            response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<ProfileVM>>();
-            if (result != null)
+
+            var response = await _httpClient.GetAsync($"http://localhost:5166/api/User/GetUserProfile?userId={id}");
+            
+            if (!response.IsSuccessStatusCode)
             {
-                return result.Data;
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"API returned {response.StatusCode}: {errorContent}");
             }
-            return null;
+            
+            var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<ProfileVM>>();
+            
+            if (result?.Success == true && result.Data != null)
+                return result.Data;
+                
+            throw new InvalidOperationException($"API returned success=false or null data: {result?.Message}");
         }
+
         public async Task<bool> UpdateProfileAsync(ProfileVM profile)
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.PutAsJsonAsync($"http://localhost:5166/api/User/UpdateUserProfile", profile);
-            response.EnsureSuccessStatusCode();
+            if (profile == null) return false;
+            
+
+            var response = await _httpClient.PutAsJsonAsync("http://localhost:5166/api/User/UpdateUserProfile", profile);
+            
+            if (!response.IsSuccessStatusCode) return false;
+            
             var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
-            if (result != null)
-            {
-                return result.Success;
-            }
-            return false;
+            return result?.Success ?? false;
         }
-        
     }
 }

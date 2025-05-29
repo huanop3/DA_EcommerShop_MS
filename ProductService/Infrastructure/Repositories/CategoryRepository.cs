@@ -1,4 +1,4 @@
-using MainEcommerceService.Models.dbMainEcommer;
+using ProductService.Models.dbProduct;
 
 public interface ICategoryRepository : IRepository<Category>
 {
@@ -7,7 +7,7 @@ public interface ICategoryRepository : IRepository<Category>
 
 public class CategoryRepository : Repository<Category>, ICategoryRepository
 {
-    public CategoryRepository(MainEcommerDBContext context) : base(context)
+    public CategoryRepository(ProductDBContext context) : base(context)
     {
     }
 }

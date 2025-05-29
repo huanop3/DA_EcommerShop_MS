@@ -91,9 +91,9 @@ namespace MainEcommerceService.Controllers
         }
         [Authorize]
         [HttpGet("GetUserProfile")]
-        public async Task<IActionResult> GetUserProfile(string userName)
+        public async Task<IActionResult> GetUserProfile(int userId)
         {
-            var response = await _userService.GetProfileByUserName(userName);
+            var response = await _userService.GetProfileById(userId);
             if (response.Success)
             {
                 return Ok(response);

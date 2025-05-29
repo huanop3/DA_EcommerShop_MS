@@ -8,6 +8,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject UserService UserService
+@inject AddressService AddressService
 @layout _AdminLayout
 @inject SignalRService SignalRService
 @attribute [Authorize(Roles = "Admin")]
@@ -21,7 +22,6 @@
         </MudPaper>
     </MudItem>
 </MudGrid>
-
 <MudGrid Class="mt-4">
     <MudItem xs="12">
         <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 4px;">
@@ -58,6 +58,7 @@
                     <MudTh Style="width: 120px">Role</MudTh>
                     <MudTh Style="width: 120px">Joined Date</MudTh>
                     <MudTh Style="width: 80px; text-align: center">Status</MudTh>
+                    <MudTh Style="width: 100px; text-align: center">Addresses</MudTh>
                     <MudTh Style="width: 80px; text-align: center">Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
@@ -86,6 +87,13 @@
                                  Color="@(context.IsActive == true ? Color.Success : Color.Default)" 
                                  Size="Size.Small" />
                     </MudTd>
+                    <MudTd DataLabel="Addresses">
+                        <MudIconButton Icon="@Icons.Material.Filled.LocationOn" 
+                                     Color="Color.Primary" Size="Size.Small"
+                                     OnClick="@(() => ViewUserAddresses(context))"
+                                     Title="View Addresses">
+                        </MudIconButton>
+                    </MudTd>
                     <MudTd DataLabel="Actions">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit"
                             OnClick="@(() => OpenUserManagementDialog(context))">Edit User</MudIconButton>
@@ -104,135 +112,163 @@
 
 @code {
     private bool isLoading = true;
-    private bool isValid = false;
     private string searchString = "";
     private string selectedRole = "";
     private string selectedStatus = "";
     private int pageSize = 5;
 
-    private List<UserVM> users = new List<UserVM>();
-    private List<RoleVM> availableRoles = new List<RoleVM>();
+    private List<UserVM> users = new();
+    private List<RoleVM> availableRoles = new();
 
     protected override async Task OnInitializedAsync()
     {
-        // Đăng ký các event handlers cho SignalR
+        RegisterSignalRHandlers();
+        await SignalRService.StartConnectionAsync();
+        await Task.WhenAll(LoadRolesAsync(), LoadUsersAsync());
+    }
+
+    private void RegisterSignalRHandlers()
+    {
         SignalRService.UserCreated += HandleUserCreated;
         SignalRService.UserUpdated += HandleUserUpdated;
-
-        // Đảm bảo kết nối SignalR được thiết lập
-        await SignalRService.StartConnectionAsync();
-
-        await LoadRolesAsync();
-        await LoadUsersAsync();
+        SignalRService.UserDeleted += HandleUserDeleted;
+        
+        SignalRService.UserStatusChanged += HandleUserStatusChanged;
     }
 
     private void HandleUserUpdated(int userId, string username)
     {
-        // Tìm user trong danh sách và cập nhật UI
-        // Hoặc load lại dữ liệu nếu cần
+        Console.WriteLine($"🔔 Admin Users page received UserUpdated: UserId={userId}, Username={username}");
+        RefreshUsers();
+        Snackbar.Add($"User updated: {username} (ID: {userId})", Severity.Info);
+    }
+
+    private void HandleUserCreated(string username)
+    {
+        Console.WriteLine($"🔔 Admin Users page received UserCreated: Username={username}");
+        RefreshUsers();
+        Snackbar.Add($"New user registered: {username}", Severity.Info);
+    }
+
+    private void HandleUserDeleted(int userId)
+    {
+        Console.WriteLine($"🔔 Admin Users page received UserDeleted: UserId={userId}");
+        RefreshUsers();
+        Snackbar.Add($"User with ID {userId} has been deleted", Severity.Warning);
+    }
+
+    private void HandleUserStatusChanged(int userId, string status)
+    {
+        Console.WriteLine($"🔔 Admin Users page received UserStatusChanged: UserId={userId}, Status={status}");
+        RefreshUsers();
+        
+        var user = users.FirstOrDefault(u => u.Id == userId);
+        var username = user?.UserName ?? $"User {userId}";
+        
+        var severity = status == "Active" ? Severity.Success : Severity.Warning;
+        Snackbar.Add($"User {username} status changed to {status}", severity);
+    }
+
+    private void RefreshUsers()
+    {
         _ = InvokeAsync(async () =>
         {
+            var previousCount = users.Count;
             await LoadUsersAsync();
+            
+            var newCount = users.Count;
+            if (newCount != previousCount)
+            {
+                Console.WriteLine($"🔄 Users list updated: {previousCount} → {newCount} users");
+            }
+            
             StateHasChanged();
         });
     }
-    private void HandleUserCreated(string username)
-{
-    // Reload users list để hiển thị user mới
-    _ = InvokeAsync(async () => 
-    {
-        await LoadUsersAsync();
-        Snackbar.Add($"New user registered: {username}", Severity.Info);
-        StateHasChanged();
-    });
-}
+
     private async Task LoadRolesAsync()
     {
         try
         {
             var roles = await UserService.GetAllRoleAsync();
-            if (roles != null)
-            {
-                availableRoles = roles.ToList();
-            }
+            availableRoles = roles?.ToList() ?? new List<RoleVM>();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading roles: {ex.Message}", Severity.Error);
         }
     }
+
     private async Task LoadUsersAsync()
     {
         try
         {
             isLoading = true;
             var fetchedUsers = await UserService.GetAllUserAsync();
-            if (fetchedUsers != null)
-            {
-                users = fetchedUsers.ToList();
-            }
-            isLoading = false;
+            users = fetchedUsers?.ToList() ?? new List<UserVM>();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
             isLoading = false;
-
         }
     }
 
     private IEnumerable<UserVM> FilteredUsers => users
-    .Where(u => string.IsNullOrWhiteSpace(searchString) ||
-    u.FirstName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-    u.LastName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-    $"{u.FirstName} {u.LastName}".Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-    u.Email.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-    u.UserName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-    u.Id.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
-    .Where(u => string.IsNullOrWhiteSpace(selectedRole) || u.Role == selectedRole)
-    .Where(u => string.IsNullOrWhiteSpace(selectedStatus) ||
-    (selectedStatus == "Active" && u.IsActive == true) ||
-    (selectedStatus == "Inactive" && u.IsActive != true));
+        .Where(u => string.IsNullOrWhiteSpace(searchString) ||
+            u.FirstName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+            u.LastName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+            $"{u.FirstName} {u.LastName}".Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+            u.Email.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+            u.UserName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+            u.Id.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        .Where(u => string.IsNullOrWhiteSpace(selectedRole) || u.Role == selectedRole)
+        .Where(u => string.IsNullOrWhiteSpace(selectedStatus) ||
+            (selectedStatus == "Active" && u.IsActive == true) ||
+            (selectedStatus == "Inactive" && u.IsActive != true));
 
-    private Color GetRoleColor(string role)
+    private string GetUserDisplayInfo(UserVM user, string property)
     {
-        return role switch
+        return property switch
         {
-            "Admin" => Color.Error,
-            "Customer" => Color.Info,
-            "Seller" => Color.Success,
-            "Shipper" => Color.Primary,
-
-            _ => Color.Default
+            "FullName" => $"{user.FirstName} {user.LastName}".Trim(),
+            "Initials" => GetUserInitials(user.FirstName, user.LastName),
+            _ => ""
         };
     }
 
-    private string GetFullName(UserVM user)
+    private string GetUserInitials(string firstName, string lastName)
     {
-        return $"{user.FirstName} {user.LastName}".Trim();
-    }
-
-    private string GetInitials(UserVM user)
-    {
-        string fn = user.FirstName?.Trim() ?? "";
-        string ln = user.LastName?.Trim() ?? "";
-
-        if (string.IsNullOrEmpty(fn) && string.IsNullOrEmpty(ln))
-            return "?";
-
-        if (string.IsNullOrEmpty(ln))
-            return fn.Length > 0 ? fn[0].ToString().ToUpper() : "?";
-
-        if (string.IsNullOrEmpty(fn))
-            return ln.Length > 0 ? ln[0].ToString().ToUpper() : "?";
-
+        var fn = firstName?.Trim() ?? "";
+        var ln = lastName?.Trim() ?? "";
+        
+        if (string.IsNullOrEmpty(fn) && string.IsNullOrEmpty(ln)) return "?";
+        if (string.IsNullOrEmpty(ln)) return fn.Length > 0 ? fn[0].ToString().ToUpper() : "?";
+        if (string.IsNullOrEmpty(fn)) return ln.Length > 0 ? ln[0].ToString().ToUpper() : "?";
+        
         return $"{fn[0]}{ln[0]}".ToUpper();
     }
+
+    private Color GetRoleColor(string role) => role switch
+    {
+        "Admin" => Color.Error,
+        "Customer" => Color.Info,
+        "Seller" => Color.Success,
+        "Shipper" => Color.Primary,
+        _ => Color.Default
+    };
+
+    private string GetFullName(UserVM user) => $"{user.FirstName} {user.LastName}".Trim();
+
+    private string GetInitials(UserVM user) => GetUserInitials(user.FirstName, user.LastName);
+
     private async Task OpenUserManagementDialog(UserVM user)
     {
         try
         {
-            // Tạo bản copy của user để tránh binding trực tiếp
             var userCopy = new UserVM
             {
                 Id = user.Id,
@@ -269,15 +305,44 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in OpenUserManagementDialog: {ex.Message}");
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ViewUserAddresses(UserVM user)
+    {
+        try
+        {
+            var addresses = await AddressService.GetAddressesByUserIdAsync(user.Id);
+            var userAddresses = addresses?.ToList() ?? new List<AddressVM>();
+
+            var parameters = new DialogParameters
+            {
+                ["User"] = user,
+                ["Addresses"] = userAddresses
+            };
+
+            var options = new DialogOptions
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true
+            };
+            
+            await DialogService.ShowAsync<UserAddressManagementDialog>($"Addresses for {GetFullName(user)}", parameters, options);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading addresses: {ex.Message}", Severity.Error);
         }
     }
 
     public void Dispose()
     {
-        // Hủy đăng ký các event handlers
         SignalRService.UserCreated -= HandleUserCreated;
         SignalRService.UserUpdated -= HandleUserUpdated;
+        SignalRService.UserDeleted -= HandleUserDeleted;
+        SignalRService.UserStatusChanged -= HandleUserStatusChanged;
     }
 }
+

@@ -4,4 +4,6 @@ public class HTTPResponseClient<T>
     public string? Message { get; set; } = "";
     public DateTime? DateTime { get; set; }
     public T? Data { get; set; }
+    public bool Success { get; internal set; }
+
 }

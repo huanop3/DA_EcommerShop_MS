@@ -11,7 +11,7 @@ public interface IUserService
     Task<HTTPResponseClient<IEnumerable<UserVM>>> GetAllUser();
     Task<HTTPResponseClient<IEnumerable<UserVM>>> GetUserByPage(int pageIndex, int pageSize);
     Task<HTTPResponseClient<IEnumerable<RoleVM>>> GetAllRole();
-    Task<HTTPResponseClient<ProfileVM>> GetProfileByUserName(string userName);
+    Task<HTTPResponseClient<ProfileVM>> GetProfileById(int userId);
     Task<HTTPResponseClient<string>> UpdateProfile(ProfileVM profileVM);
     Task<HTTPResponseClient<string>> UpdateUser(UserListVM userlistVM);
     Task<HTTPResponseClient<string>> DeleteUser(int userId);
@@ -238,7 +238,7 @@ public class UserService : IUserService
                 return response;
             }
             user.FirstName = userlistVM.FirstName;
-            user.LastName = userlistVM.LastName;
+            user.LastName = userlistVM.LastName;    
             user.Email = userlistVM.Email;
             user.IsActive = userlistVM.IsActive;
 
@@ -330,9 +330,17 @@ public class UserService : IUserService
                 userRole.IsDeleted = true;
                 _unitOfWork._userRoleRepository.Update(userRole);
             }
-
+            //Xóa sellerProfile nếu có
+            var sellerProfile = await _unitOfWork._sellerProfileRepository.Query()
+                .FirstOrDefaultAsync(sp => sp.UserId == userId);
+            if (sellerProfile != null)
+            {
+                // Đặt trạng thái xóa cho sellerProfile
+                sellerProfile.IsDeleted = true;
+                _unitOfWork._sellerProfileRepository.Update(sellerProfile);
+            }
             // Đặt trạng thái xóa cho user
-            user.IsDeleted = true;
+                user.IsDeleted = true;
             _unitOfWork._userRepository.Update(user);
 
             await _unitOfWork.SaveChangesAsync();
@@ -363,13 +371,13 @@ public class UserService : IUserService
         }
         return response;
     }
-    public async Task<HTTPResponseClient<ProfileVM>> GetProfileByUserName(string userName)
+    public async Task<HTTPResponseClient<ProfileVM>> GetProfileById(int userId)
     {
         var response = new HTTPResponseClient<ProfileVM>();
         try
         {
             var user = await _unitOfWork._userRepository.Query()
-                .FirstOrDefaultAsync(u => u.Username == userName && u.IsDeleted == false);
+                .FirstOrDefaultAsync(u => u.UserId == userId);
             if (user == null)
             {
                 response.Success = false;

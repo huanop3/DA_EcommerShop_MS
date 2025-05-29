@@ -19,7 +19,7 @@ builder.Services.AddDbContext<MainEcommerDBContext>(options =>
     options
         .UseLazyLoadingProxies()
         .UseSqlServer(connectionString));
-        //Bật giao diện authentication 
+//Bật giao diện authentication 
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
@@ -99,14 +99,20 @@ builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<ILoginLogRepository, LoginLogRepository>();
+builder.Services.AddScoped<ICouponRepository, CouponRepository>();
+builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<ISellerProfileRepository, SellerProfileRepository>();
 
 //DI UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 //DI Service
 builder.Services.AddScoped<IUserLoginService, UserLoginService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ICouponService, CouponService>();
+builder.Services.AddScoped<IAddressService, AddressService>();
+builder.Services.AddScoped<ISellerProfileService, SellerProfileService>();
+// builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddHttpClient();
 
 // Lấy chuỗi kết nối Redis từ cấu hình
@@ -115,11 +121,14 @@ var redisConnectionString = builder.Configuration.GetConnectionString("RedisConn
 // Thêm SignalR với Redis Backplane
 builder.Services.AddSignalR(options =>
 {
-    options.KeepAliveInterval = TimeSpan.FromSeconds(15); // Giảm xuống từ 30s mặc định
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30); // Giảm xuống từ 60s
+    options.EnableDetailedErrors = true;
+    options.MaximumReceiveMessageSize = 32 * 1024; // 32KB
     options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
 })
-    .AddStackExchangeRedis(redisConnectionString, options => {
+    .AddStackExchangeRedis(redisConnectionString, options =>
+    {
         options.Configuration.ChannelPrefix = "MainEcommerceService";
     }).AddJsonProtocol();
 
@@ -131,7 +140,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
 });
 
 // Cấu hình ConnectionMultiplexer với cùng một connection string
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp => {
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
     return ConnectionMultiplexer.Connect(redisConnectionString);
 });
 
