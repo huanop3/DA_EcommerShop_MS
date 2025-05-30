@@ -1,39 +1,44 @@
 using Microsoft.EntityFrameworkCore;
+using ProductService.Models.dbProduct;
+using ProductService.Models.AutoMapperProfiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Swagger + AutoMapper + Controllers
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-//Add service entity framework
-// var connectionString = builder.Configuration.GetConnectionString("ProductDbService");
-// builder.Services.AddDbContext<ProductDbServiceContext>(options =>
-//     options
-//         .UseLazyLoadingProxies(false)
-//         .UseSqlServer(connectionString));
-//Add middleware controller
+builder.Services.AddAutoMapper(typeof(ProductProfile)); // Đăng ký AutoMapper
+
+// DbContext
+var connectionString = builder.Configuration.GetConnectionString("ProductDbService");
+builder.Services.AddDbContext<ProductDBContext>(options =>
+    options
+        .UseLazyLoadingProxies(false)
+        .UseSqlServer(connectionString));
+
+// Controller
 builder.Services.AddControllers();
-//bật cors
+
+// CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("allow_all", builder =>
+    options.AddPolicy("allow_all", policy =>
     {
-            builder.AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
 var app = builder.Build();
-// Configure the HTTP request pipeline.
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseCors("allow_all");
-app.MapControllers();
-app.UseHttpsRedirection();
-app.Run();
 
+app.UseCors("allow_all");
+app.UseHttpsRedirection();
+app.MapControllers();
+app.Run();

@@ -25,11 +25,7 @@ public partial class ProductDBContext : DbContext
 
     public virtual DbSet<ProductReview> ProductReviews { get; set; }
 
-    public virtual DbSet<ProductTag> ProductTags { get; set; }
-
     public virtual DbSet<ProductVariant> ProductVariants { get; set; }
-
-    public virtual DbSet<Tag> Tags { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ProductDbService");
@@ -38,7 +34,7 @@ public partial class ProductDBContext : DbContext
     {
         modelBuilder.Entity<Category>(entity =>
         {
-            entity.HasKey(e => e.CategoryId).HasName("PK__Categori__19093A0B18DF283F");
+            entity.HasKey(e => e.CategoryId).HasName("PK__Categori__19093A0BE5224833");
 
             entity.HasIndex(e => e.IsDeleted, "IX_Categories_IsDeleted");
 
@@ -56,7 +52,7 @@ public partial class ProductDBContext : DbContext
 
         modelBuilder.Entity<Product>(entity =>
         {
-            entity.HasKey(e => e.ProductId).HasName("PK__Products__B40CC6CD6125857F");
+            entity.HasKey(e => e.ProductId).HasName("PK__Products__B40CC6CDB78BC0CC");
 
             entity.HasIndex(e => e.CategoryId, "IX_Products_CategoryId");
 
@@ -69,7 +65,6 @@ public partial class ProductDBContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ProductName).HasMaxLength(255);
-            entity.Property(e => e.ProductTags).HasMaxLength(500);
             entity.Property(e => e.TotalSold).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
@@ -81,7 +76,7 @@ public partial class ProductDBContext : DbContext
 
         modelBuilder.Entity<ProductEvent>(entity =>
         {
-            entity.HasKey(e => e.EventId).HasName("PK__ProductE__7944C81037D4AAF5");
+            entity.HasKey(e => e.EventId).HasName("PK__ProductE__7944C81052A39288");
 
             entity.HasIndex(e => e.ProcessedAt, "IX_ProductEvents_ProcessedAt");
 
@@ -100,7 +95,7 @@ public partial class ProductDBContext : DbContext
 
         modelBuilder.Entity<ProductImage>(entity =>
         {
-            entity.HasKey(e => e.ImageId).HasName("PK__ProductI__7516F70C798F3F6A");
+            entity.HasKey(e => e.ImageId).HasName("PK__ProductI__7516F70C67D83594");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -118,7 +113,7 @@ public partial class ProductDBContext : DbContext
 
         modelBuilder.Entity<ProductReview>(entity =>
         {
-            entity.HasKey(e => e.ReviewId).HasName("PK__ProductR__74BC79CEE9EEE24F");
+            entity.HasKey(e => e.ReviewId).HasName("PK__ProductR__74BC79CEB188646A");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -132,38 +127,9 @@ public partial class ProductDBContext : DbContext
                 .HasConstraintName("FK_ProductReviews_Products");
         });
 
-        modelBuilder.Entity<ProductTag>(entity =>
-        {
-            entity.HasKey(e => e.ProductTagId).HasName("PK__ProductT__88A7F34A0257F2D0");
-
-            entity.HasIndex(e => e.IsDeleted, "IX_ProductTags_IsDeleted");
-
-            entity.HasIndex(e => e.ProductId, "IX_ProductTags_ProductId");
-
-            entity.HasIndex(e => e.TagId, "IX_ProductTags_TagId");
-
-            entity.HasIndex(e => new { e.ProductId, e.TagId }, "UQ_ProductTags_ProductId_TagId").IsUnique();
-
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
-            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-
-            entity.HasOne(d => d.Product).WithMany(p => p.ProductTagsNavigation)
-                .HasForeignKey(d => d.ProductId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ProductTags_Products");
-
-            entity.HasOne(d => d.Tag).WithMany(p => p.ProductTags)
-                .HasForeignKey(d => d.TagId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ProductTags_Tags");
-        });
-
         modelBuilder.Entity<ProductVariant>(entity =>
         {
-            entity.HasKey(e => e.VariantId).HasName("PK__ProductV__0EA2338410E81A7D");
+            entity.HasKey(e => e.VariantId).HasName("PK__ProductV__0EA233841AE007E7");
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -180,23 +146,6 @@ public partial class ProductDBContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductVariants_Products");
-        });
-
-        modelBuilder.Entity<Tag>(entity =>
-        {
-            entity.HasKey(e => e.TagId).HasName("PK__Tags__657CF9AC575078BD");
-
-            entity.HasIndex(e => e.IsDeleted, "IX_Tags_IsDeleted");
-
-            entity.HasIndex(e => e.TagName, "UQ_Tags_TagName").IsUnique();
-
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.Description).HasMaxLength(255);
-            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
-            entity.Property(e => e.TagName).HasMaxLength(100);
-            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
         });
 
         OnModelCreatingPartial(modelBuilder);

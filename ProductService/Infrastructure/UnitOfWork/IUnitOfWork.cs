@@ -1,5 +1,6 @@
 
 using ProductService.Models.dbProduct;
+using System.Threading.Tasks;
 
 public interface IUnitOfWork : IAsyncDisposable
 {
@@ -12,9 +13,9 @@ public class UnitOfWork : IUnitOfWork
   
 
 
-    private readonly ProductDbContext _context;
+    private readonly ProductDBContext _context;
 
-    public UnitOfWork(ProductDbContext context)
+    public UnitOfWork(ProductDBContext context)
     {
         _context = context;
 

@@ -15,10 +15,10 @@ public interface IRepository<T> where T : class
 
 public class Repository<T> : IRepository<T> where T : class
 {
-    protected readonly ProductDbContext _context;
+    protected readonly ProductDBContext _context;
     public readonly DbSet<T> _dbSet;
 
-    public Repository(ProductDbContext context)
+    public Repository(ProductDBContext context)
     {
         _context = context;
         _dbSet = _context.Set<T>();

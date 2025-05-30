@@ -13,8 +13,6 @@ public partial class Product
 
     public string? Description { get; set; }
 
-    public string? ProductTags { get; set; }
-
     public decimal Price { get; set; }
 
     public decimal? DiscountPrice { get; set; }
@@ -36,8 +34,6 @@ public partial class Product
     public virtual ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
 
     public virtual ICollection<ProductReview> ProductReviews { get; set; } = new List<ProductReview>();
-
-    public virtual ICollection<ProductTag> ProductTagsNavigation { get; set; } = new List<ProductTag>();
 
     public virtual ICollection<ProductVariant> ProductVariants { get; set; } = new List<ProductVariant>();
 }
