@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Authorization;
 
-namespace MainEcommerceService.Hubs
+namespace ProductService.Hubs
 {
     public class NotificationHub : Hub
     {
@@ -23,32 +23,96 @@ namespace MainEcommerceService.Hubs
             await Clients.All.SendAsync("ReceiveMessage", user, message);
         }
 
-        // CRUD User Operations - Các phương thức này sẽ được gọi từ UserService
-        public async Task NotifyUserCreated(string name)
+        // CRUD Product Operations
+        public async Task NotifyProductCreated(int productId, string productName, string categoryName)
         {
-            _logger.LogInformation($"Gửi thông báo tạo người dùng mới: {name}");
-            await Clients.All.SendAsync("UserCreated",name);
+            _logger.LogInformation($"Gửi thông báo tạo sản phẩm mới: {productId} - {productName}");
+            await Clients.All.SendAsync("ProductCreated", productId, productName, categoryName);
+        }
+
+        public async Task NotifyProductUpdated(int productId, string productName, decimal price)
+        {
+            _logger.LogInformation($"Gửi thông báo cập nhật sản phẩm: {productId} - {productName}");
+            await Clients.All.SendAsync("ProductUpdated", productId, productName, price);
+        }
+
+        [Authorize(Roles = "Admin,Seller")]
+        public async Task NotifyProductDeleted(int productId, string productName)
+        {
+            _logger.LogInformation($"Gửi thông báo xóa sản phẩm: {productId} - {productName}");
+            await Clients.All.SendAsync("ProductDeleted", productId, productName);
+        }
+
+        public async Task NotifyProductStockChanged(int productId, string productName, int newStock)
+        {
+            _logger.LogInformation($"Gửi thông báo thay đổi tồn kho sản phẩm: {productId} - Stock: {newStock}");
+            await Clients.All.SendAsync("ProductStockChanged", productId, productName, newStock);
+        }
+
+        public async Task NotifyProductPriceChanged(int productId, string productName, decimal oldPrice, decimal newPrice)
+        {
+            _logger.LogInformation($"Gửi thông báo thay đổi giá sản phẩm: {productId} - {oldPrice} -> {newPrice}");
+            await Clients.All.SendAsync("ProductPriceChanged", productId, productName, oldPrice, newPrice);
+        }
+
+        // Category Operations
+        public async Task NotifyCategoryCreated(int categoryId, string categoryName)
+        {
+            _logger.LogInformation($"Gửi thông báo tạo danh mục mới: {categoryId} - {categoryName}");
+            await Clients.All.SendAsync("CategoryCreated", categoryId, categoryName);
+        }
+
+        public async Task NotifyCategoryUpdated(int categoryId, string categoryName)
+        {
+            _logger.LogInformation($"Gửi thông báo cập nhật danh mục: {categoryId} - {categoryName}");
+            await Clients.All.SendAsync("CategoryUpdated", categoryId, categoryName);
         }
 
         [Authorize(Roles = "Admin")]
-        public async Task NotifyUserUpdated(int userId, string name)
+        public async Task NotifyCategoryDeleted(int categoryId, string categoryName)
         {
-            _logger.LogInformation($"Gửi thông báo cập nhật người dùng: {userId} - {name}");
-            await Clients.All.SendAsync("UserUpdated", userId, name);
+            _logger.LogInformation($"Gửi thông báo xóa danh mục: {categoryId} - {categoryName}");
+            await Clients.All.SendAsync("CategoryDeleted", categoryId, categoryName);
         }
 
-        [Authorize(Roles = "Admin")]
-        public async Task NotifyUserDeleted(int userId)
+        // Product Review Operations
+        public async Task NotifyNewReview(int productId, string productName, int rating, string reviewerName)
         {
-            _logger.LogInformation($"Gửi thông báo xóa người dùng: {userId}");
-            await Clients.All.SendAsync("UserDeleted", userId);
+            _logger.LogInformation($"Gửi thông báo đánh giá mới cho sản phẩm: {productId} - Rating: {rating}");
+            await Clients.All.SendAsync("NewReview", productId, productName, rating, reviewerName);
         }
 
-        [Authorize(Roles = "Admin")]
-        public async Task NotifyUserStatusChanged(int userId, string status)
+        // Promotion Operations
+        public async Task NotifyPromotionStarted(int promotionId, string promotionName, decimal discountPercent)
         {
-            _logger.LogInformation($"Gửi thông báo thay đổi trạng thái người dùng: {userId} - {status}");
-            await Clients.All.SendAsync("UserStatusChanged", userId, status);
+            _logger.LogInformation($"Gửi thông báo khuyến mãi bắt đầu: {promotionId} - {promotionName}");
+            await Clients.All.SendAsync("PromotionStarted", promotionId, promotionName, discountPercent);
+        }
+
+        public async Task NotifyPromotionEnded(int promotionId, string promotionName)
+        {
+            _logger.LogInformation($"Gửi thông báo khuyến mãi kết thúc: {promotionId} - {promotionName}");
+            await Clients.All.SendAsync("PromotionEnded", promotionId, promotionName);
+        }
+
+        // Group Management for Categories
+        public async Task JoinCategoryGroup(string categoryId)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"Category_{categoryId}");
+            _logger.LogInformation($"Client {Context.ConnectionId} đã tham gia nhóm Category_{categoryId}");
+        }
+
+        public async Task LeaveCategoryGroup(string categoryId)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Category_{categoryId}");
+            _logger.LogInformation($"Client {Context.ConnectionId} đã rời khỏi nhóm Category_{categoryId}");
+        }
+
+        // Gửi thông báo cho nhóm danh mục cụ thể
+        public async Task SendCategoryNotification(string categoryId, string message)
+        {
+            _logger.LogInformation($"Gửi thông báo đến nhóm Category_{categoryId}: {message}");
+            await Clients.Group($"Category_{categoryId}").SendAsync("CategoryNotification", categoryId, message);
         }
 
         // Đăng ký user-connection mapping
@@ -59,16 +123,34 @@ namespace MainEcommerceService.Hubs
             _logger.LogInformation($"User {userId} đã đăng ký kết nối với ID: {Context.ConnectionId}");
         }
 
-        // Gửi thông báo riêng cho từng user
+        // Gửi thông báo riêng cho từng user (ví dụ: sản phẩm trong wishlist có thay đổi)
         public async Task SendPrivateNotification(string userId, string message)
         {
             _logger.LogInformation($"Gửi thông báo riêng đến user {userId}: {message}");
             await Clients.Group($"User_{userId}").SendAsync("PrivateNotification", message);
         }
 
+        // Thông báo sản phẩm sắp hết hàng (chỉ cho Admin/Seller)
+        [Authorize(Roles = "Admin,Seller")]
+        public async Task NotifyLowStock(int productId, string productName, int currentStock, int minStock)
+        {
+            _logger.LogInformation($"Cảnh báo tồn kho thấp: {productName} - {currentStock}/{minStock}");
+            await Clients.Group("Sellers").SendAsync("LowStockAlert", productId, productName, currentStock, minStock);
+        }
+
         public override async Task OnConnectedAsync()
         {
             _logger.LogInformation($"Client kết nối: {Context.ConnectionId}");
+            
+            // Tự động thêm vào nhóm tất cả người dùng để nhận thông báo chung
+            await Groups.AddToGroupAsync(Context.ConnectionId, "AllUsers");
+            
+            // Nếu là Seller thì thêm vào nhóm Sellers
+            if (Context.User?.IsInRole("Seller") == true || Context.User?.IsInRole("Admin") == true)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, "Sellers");
+            }
+            
             await Clients.All.SendAsync("UserConnected", Context.ConnectionId);
             await base.OnConnectedAsync();
         }
