@@ -32,45 +32,66 @@ namespace BlazorWebApp.Services
             _navigationManager = navigationManager;
             _authStateProvider = authStateProvider;
         }
+        // Gán token vào header trước khi gọi API
+        private async Task SetAuthorizationHeader()
+        {
+            var token = await _localStorage.GetItemAsStringAsync("token");
+            if (string.IsNullOrEmpty(token))
+            {
+                // Nếu không có token, thử refresh
+                token = await _localStorage.GetItemAsStringAsync("refreshToken");
+            }
 
+            if (!string.IsNullOrEmpty(token))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+        }
         /// <summary>
-        /// Kiểm tra trạng thái đăng nhập - Đơn giản hóa vì AuthHttpClientHandler đã handle refresh
+        /// Kiểm tra trạng thái đăng nhập của người dùng
         /// </summary>
         public async Task<bool> CheckAuthenticationStatus()
         {
             try
             {
-                var refreshToken = await _localStorage.GetItemAsStringAsync("refreshToken");
+                // Lấy token từ local storage
+                var token = await _localStorage.GetItemAsStringAsync("refreshToken");
 
-                // Không có refresh token = chưa đăng nhập
-                if (string.IsNullOrEmpty(refreshToken))
+                if (string.IsNullOrEmpty(token))
                 {
                     return false;
                 }
 
-                // Clean token
-                refreshToken = CleanToken(refreshToken);
-
-                // Validate refresh token format
-                if (!IsValidJwtFormat(refreshToken))
+                // Bỏ dấu ngoặc kép nếu có
+                if (token.StartsWith("\"") && token.EndsWith("\""))
                 {
-                    Console.WriteLine("Refresh token không đúng định dạng JWT");
-                    await ClearAuthData();
+                    token = token.Trim('"');
+                    // Lưu lại token đã sửa
+                    await _localStorage.SetItemAsStringAsync("refreshToken", token);
+                }
+
+                var handler = new JwtSecurityTokenHandler();
+
+                if (!handler.CanReadToken(token))
+                {
+                    Console.WriteLine("Token không đúng định dạng JWT");
+                    await _localStorage.RemoveItemAsync("token");
+                    await _localStorage.RemoveItemAsync("refreshToken");
                     return false;
                 }
 
-                // Có refresh token hợp lệ = đã đăng nhập
-                // AuthHttpClientHandler và CustomAuthStateProvider sẽ lo việc refresh
                 return true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Lỗi xác thực: {ex.Message}");
-                await ClearAuthData();
+                await _localStorage.RemoveItemAsync("token");
+
+                await _localStorage.RemoveItemAsync("refreshToken");
                 return false;
             }
         }
-
         /// <summary>
         /// Lấy thông tin user từ token
         /// </summary>
@@ -84,30 +105,21 @@ namespace BlazorWebApp.Services
                     return null;
                 }
 
-                token = CleanToken(token);
-                
-                if (!IsValidJwtFormat(token))
-                {
-                    return null;
-                }
-
                 var handler = new JwtSecurityTokenHandler();
                 var jsonToken = handler.ReadToken(token) as JwtSecurityToken;
 
                 if (jsonToken != null)
                 {
-                    var usernameClaim = jsonToken.Claims.FirstOrDefault(x => 
-                        x.Type == "unique_name" || x.Type == "username" || x.Type == "sub");
-                    return usernameClaim?.Value;
+                    var userName = jsonToken.Claims.First(claim => claim.Type == "unique_name").Value;
+                    return userName;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Lỗi lấy username: {ex.Message}");
+                Console.WriteLine($"Lỗi khi lấy tên người dùng: {ex.Message}");
             }
             return null;
         }
-
         /// <summary>
         /// Đăng nhập vào hệ thống
         /// </summary>
@@ -115,12 +127,14 @@ namespace BlazorWebApp.Services
         {
             try
             {
+                // Thu thập thông tin thiết bị từ JavaScript thông qua phương thức GetDeviceInfo
                 var deviceInfo = await GetDeviceInfo();
                 if (deviceInfo == null)
                 {
-                    return (false, "Không thể thu thập thông tin thiết bị");
+                    return (false, "Không thể thu thập thông tin thiết bị. Vui lòng bật JavaScript và thử lại.");
                 }
 
+                // Tạo LoginRequestVM với thông tin đăng nhập và thông tin thiết bị
                 var loginRequest = new LoginRequestVM
                 {
                     Username = loginModel.Username,
@@ -130,42 +144,50 @@ namespace BlazorWebApp.Services
                     DeviceOS = deviceInfo.DeviceOS,
                     ClientName = deviceInfo.ClientName,
                     IPAddress = deviceInfo.IPAddress,
-                    CollectedAt = deviceInfo.CollectedAt
+                    CollectedAt = DateTime.Now
                 };
 
-                var response = await _httpClient.PostAsJsonAsync("api/UserLogin/Login", loginRequest);
-                
-                if (!response.IsSuccessStatusCode)
+                // Gọi API đăng nhập
+                var response = await _httpClient.PostAsJsonAsync("https://localhost:7260/api/UserLogin/LoginUser", loginRequest);
+
+                // Phân tích phản hồi từ server
+                var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<UserLoginResponseVM>>();
+
+                if (result == null)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    return (false, $"Lỗi server: {response.StatusCode}");
+                    return (false, "Không nhận được phản hồi từ server");
                 }
 
-                var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<UserLoginResponseVM>>();
-                
-                if (result?.Success == true && result.Data != null)
+                // Nếu đăng nhập thành công
+                if (result.Success && result.Data != null)
                 {
-                    // Lưu tokens
+                    // Lưu token vào local storage
                     await _localStorage.SetItemAsStringAsync("token", result.Data.AccessToken);
-                    await _localStorage.SetItemAsStringAsync("refreshToken", result.Data.RefreshToken);
-                    
-                    // Notify authentication state changed
-                    if (_authStateProvider is CustomAuthStateProvider customProvider)
+
+
+                    // Lưu refresh token
+                    if (!string.IsNullOrEmpty(result.Data.RefreshToken))
                     {
-                        customProvider.NotifyStateChanged();
+                        await _localStorage.SetItemAsStringAsync("refreshToken", result.Data.RefreshToken);
                     }
-                    
-                    return (true, "Đăng nhập thành công");
+
+                    // Lưu token vào cookie với thời hạn ngắn (1 ngày)
+                    await _jsRuntime.InvokeVoidAsync("setCookie", "token", result.Data.AccessToken, 1);
+
+                    // Thông báo đăng nhập thành công
+
+                    return (true, result.Message ?? "Đăng nhập thành công");
                 }
                 else
                 {
-                    return (false, result?.Message ?? "Đăng nhập thất bại");
+                    // Trả về thông báo lỗi từ server
+                    return (false, result.Message ?? "Đăng nhập không thành công");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Lỗi đăng nhập: {ex.Message}");
-                return (false, "Có lỗi xảy ra trong quá trình đăng nhập");
+                return (false, "Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại sau.");
             }
         }
 
@@ -176,28 +198,29 @@ namespace BlazorWebApp.Services
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("api/UserLogin/Register", registerModel);
-                
-                if (!response.IsSuccessStatusCode)
+                var response = await _httpClient.PostAsJsonAsync("https://localhost:7260/api/UserLogin/RegisterUser", registerModel);
+
+                // Đọc phản hồi từ server
+                var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<RegisterLoginVM>>();
+
+                if (result == null)
                 {
-                    return (false, $"Lỗi server: {response.StatusCode}");
+                    return (false, "Không nhận được phản hồi từ server");
                 }
 
-                var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
-                
-                if (result?.Success == true)
+                if (result.Success)
                 {
-                    return (true, "Đăng ký thành công");
+                    return (true, result.Message ?? "Đăng ký thành công");
                 }
                 else
                 {
-                    return (false, result?.Message ?? "Đăng ký thất bại");
+                    return (false, result.Message ?? "Đăng ký không thành công");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Lỗi đăng ký: {ex.Message}");
-                return (false, "Có lỗi xảy ra trong quá trình đăng ký");
+                return (false, "Có lỗi xảy ra khi đăng ký. Vui lòng thử lại sau.");
             }
         }
 
@@ -206,112 +229,93 @@ namespace BlazorWebApp.Services
         /// </summary>
         public async Task Logout()
         {
-            try
+            await SetAuthorizationHeader();
+            var refreshToken = await _localStorage.GetItemAsStringAsync("refreshToken");
+
+            // Lưu lại token đã sửa
+            var response = await _httpClient.PutAsJsonAsync("https://localhost:7260/api/UserLogin/Logout", refreshToken);
+            if (response.IsSuccessStatusCode)
             {
-                var refreshToken = await _localStorage.GetItemAsStringAsync("refreshToken");
-                
-                if (!string.IsNullOrEmpty(refreshToken))
-                {
-                    refreshToken = CleanToken(refreshToken);
-                    
-                    // Gọi API logout - AuthHttpClientHandler sẽ tự động thêm token
-                    var response = await _httpClient.PutAsJsonAsync("api/UserLogin/Logout", refreshToken);
-                    
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        Console.WriteLine("Lỗi khi đăng xuất từ server");
-                    }
-                }
+                await _localStorage.RemoveItemAsync("token");
+                await _localStorage.RemoveItemAsync("refreshToken");
+                await _jsRuntime.InvokeVoidAsync("deleteCookie", "token");
+
+                // Thông báo đã đăng xuất
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"Lỗi khi đăng xuất: {ex.Message}");
+                Console.WriteLine("Lỗi khi đăng xuất");
             }
-            finally
-            {
-                // Luôn clear local data
-                await ClearAuthData();
-                
-                // Notify authentication state changed
-                if (_authStateProvider is CustomAuthStateProvider customProvider)
-                {
-                    customProvider.NotifyStateChanged();
-                }
-            }
+
+
         }
 
-        // HELPER METHODS
-        private string CleanToken(string token)
-        {
-            if (string.IsNullOrEmpty(token)) return token;
-            
-            if (token.StartsWith("\"") && token.EndsWith("\""))
-            {
-                return token.Trim('"');
-            }
-            return token;
-        }
-
-        private bool IsValidJwtFormat(string token)
-        {
-            if (string.IsNullOrEmpty(token)) return false;
-            
-            var handler = new JwtSecurityTokenHandler();
-            return handler.CanReadToken(token);
-        }
-
-        private async Task ClearAuthData()
-        {
-            await _localStorage.RemoveItemAsync("token");
-            await _localStorage.RemoveItemAsync("refreshToken");
-            await _jsRuntime.InvokeVoidAsync("deleteCookie", "token");
-        }
-
-        public async Task<DeviceInfoVM> GetDeviceInfo()
+        public async Task<DeviceInfoVM> CollectDeviceInfo()
         {
             try
             {
+                // Kiểm tra xem đã có thông tin thiết bị chưa
                 var existingInfo = await _localStorage.GetItemAsync<DeviceInfoVM>("deviceInfo");
                 if (existingInfo != null)
                 {
+                    // Cập nhật thời gian thu thập
+                    existingInfo.CollectedAt = DateTime.Now;
+                    await _localStorage.SetItemAsync("deviceInfo", existingInfo);
                     return existingInfo;
                 }
 
-                var jsTask = _jsRuntime.InvokeAsync<DeviceInfoVM>("collectDeviceInfo").AsTask();
-                var timeoutTask = Task.Delay(5000);
+                // Thiết lập timeout cho JavaScript interop
+                var timeoutTask = Task.Delay(5000); // 5 giây timeout
+
+                // Thu thập thông tin thiết bị từ JavaScript
+                var jsTask = _jsRuntime.InvokeAsync<DeviceInfoVM>("getFullDeviceInfo").AsTask();
+
+                // Chờ task nào hoàn thành trước
                 var completedTask = await Task.WhenAny(jsTask, timeoutTask);
 
+                // Nếu JavaScript interop hoàn thành trước timeout
                 if (completedTask == jsTask && !jsTask.IsFaulted && !jsTask.IsCanceled)
                 {
                     var deviceInfo = await jsTask;
                     if (deviceInfo != null)
                     {
+                        deviceInfo.CollectedAt = DateTime.Now;
+                        // Lưu vào localStorage
                         await _localStorage.SetItemAsync("deviceInfo", deviceInfo);
                         return deviceInfo;
                     }
                 }
 
-                // Fallback device info
-                return CreateFallbackDeviceInfo();
+                // Nếu JavaScript interop bị lỗi hoặc timeout, tạo thông tin mặc định
+                Console.WriteLine("Không thể thu thập thông tin thiết bị từ JavaScript - sử dụng thông tin mặc định");
+                return null;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Lỗi thu thập device info: {ex.Message}");
-                return CreateFallbackDeviceInfo();
+                Console.WriteLine($"Lỗi khi thu thập thông tin thiết bị: {ex.Message}");
+                return null;
             }
         }
-
-        private DeviceInfoVM CreateFallbackDeviceInfo()
+        public async Task<DeviceInfoVM> GetDeviceInfo()
         {
-            return new DeviceInfoVM
+            try
             {
-                DeviceID = Guid.NewGuid().ToString(),
-                DeviceName = "Unknown Device",
-                DeviceOS = "Unknown OS",
-                ClientName = "BlazorWebApp",
-                IPAddress = "Unknown",
-                CollectedAt = DateTime.Now
-            };
+                var deviceInfo = await _localStorage.GetItemAsync<DeviceInfoVM>("deviceInfo");
+                if (deviceInfo == null)
+                {
+                    deviceInfo = await CollectDeviceInfo();
+                }
+                return deviceInfo;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi khi lấy thông tin thiết bị: {ex.Message}");
+                return null;
+            }
         }
+        /// <summary>
+        /// refresh token
+        /// </summary>
+
     }
 }

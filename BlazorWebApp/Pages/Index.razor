@@ -1,1 +1,881 @@
 ﻿@page "/"
+
+<PageTitle>Grocery Shop - Fresh Fruits, Vegetables, and More</PageTitle>
+
+<link href="css/index.css" rel="stylesheet" />
+
+<!-- Main Container -->
+<div class="body-container">
+    <div class="container-fluid">
+        <!-- Hero Banner Section -->
+        <section class="hero-section">
+            <div class="container">
+                <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel">
+                    <!-- Indicators -->
+                    <div class="carousel-indicators">
+                        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"
+                            aria-current="true" aria-label="Slide 1"></button>
+                        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"
+                            aria-label="Slide 2"></button>
+                        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2"
+                            aria-label="Slide 3"></button>
+                    </div>
+
+                    <!-- Carousel items -->
+                    <div class="carousel-inner">
+                        <!-- Slide 1 -->
+                        <div class="carousel-item active">
+                            <div class="banner-container" style="background-image: url(/images/banners/image.png)">
+                                <div class="banner-overlay"></div>
+                                <div class="banner-content">
+                                    <p class="banner-tagline">Starting at $ 29.99</p>
+                                    <h1 class="banner-heading">Explore fresh &<br>juicy fruits</h1>
+                                    <a href="/products" class="btn-shop-now">
+                                        Shop Now
+                                        <span class="icon-arrow"></span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Slide 2 -->
+                        <div class="carousel-item">
+                            <div class="banner-container" style="background-image: url(/images/banners/image.png)">
+                                <div class="banner-overlay"></div>
+                                <div class="banner-content">
+                                    <p class="banner-tagline">Discount up to 40%</p>
+                                    <h1 class="banner-heading">Fresh Vegetables<br>Every Day</h1>
+                                    <a href="/products" class="btn-shop-now">
+                                        Shop Now
+                                        <span class="icon-arrow"></span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Slide 3 -->
+                        <div class="carousel-item">
+                            <div class="banner-container" style="background-image: url('/images/banners/image.png')">
+                                <div class="banner-overlay"></div>
+                                <div class="banner-content">
+                                    <p class="banner-tagline">Organic Products</p>
+                                    <h1 class="banner-heading">Healthy Living<br>Starts Here</h1>
+                                    <a href="/products" class="btn-shop-now">
+                                        Shop Now
+                                        <span class="icon-arrow"></span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel"
+                        data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel"
+                        data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Categories Grid Section -->
+        <section class="categories-section">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="section-title text-center mb-5">
+                            <p class="section-tagline">Browse By Category</p>
+                            <h2 class="section-heading">Shop Our Top Categories</h2>
+                        </div>
+                        <div class="category-grid">
+                            <!-- Category 1 -->
+                            <div class="category-card">
+                                <div class="category-card-gradient"></div>
+                                <div class="category-card-content">
+                                    <div class="category-icon">
+                                        <img src="images/icons/fruits.svg" alt="Fruits">
+                                    </div>
+                                    <h4 class="category-title">Fruits</h4>
+                                    <p class="category-count">320 Items</p>
+                                    <div class="discount-badge">30%</div>
+                                </div>
+                            </div>
+
+                            <!-- Category 2 -->
+                            <div class="category-card">
+                                <div class="category-card-gradient"></div>
+                                <div class="category-card-content">
+                                    <div class="category-icon">
+                                        <img src="images/icons/bakery.svg" alt="Bakery">
+                                    </div>
+                                    <h4 class="category-title">Bakery</h4>
+                                    <p class="category-count">65 Items</p>
+                                </div>
+                            </div>
+
+                            <!-- Category 3 -->
+                            <div class="category-card">
+                                <div class="category-card-gradient"></div>
+                                <div class="category-card-content">
+                                    <div class="category-icon">
+                                        <img src="images/icons/vegetables.svg" alt="Vegetables">
+                                    </div>
+                                    <h4 class="category-title">Vegetables</h4>
+                                    <p class="category-count">548 Items</p>
+                                    <div class="discount-badge">15%</div>
+                                </div>
+                            </div>
+
+                            <!-- Category 4 -->
+                            <div class="category-card">
+                                <div class="category-card-gradient"></div>
+                                <div class="category-card-content">
+                                    <div class="category-icon">
+                                        <img src="images/icons/dairy.svg" alt="Dairy & Milk">
+                                    </div>
+                                    <h4 class="category-title">Dairy & Milk</h4>
+                                    <p class="category-count">48 Items</p>
+                                    <div class="discount-badge">10%</div>
+                                </div>
+                            </div>
+
+                            <!-- Category 5 -->
+                            <div class="category-card">
+                                <div class="category-card-gradient"></div>
+                                <div class="category-card-content">
+                                    <div class="category-icon">
+                                        <img src="images/icons/snack.svg" alt="Snack & Spice">
+                                    </div>
+                                    <h4 class="category-title">Snack & Spice</h4>
+                                    <p class="category-count">59 Items</p>
+                                </div>
+                            </div>
+
+                            <!-- Category 6 -->
+                            <div class="category-card">
+                                <div class="category-card-gradient"></div>
+                                <div class="category-card-content">
+                                    <div class="category-icon">
+                                        <img src="images/icons/juice.svg" alt="Juice & Drinks">
+                                    </div>
+                                    <h4 class="category-title">Juice & Drinks</h4>
+                                    <p class="category-count">845 Items</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Deal of the Day Section -->
+        <section class="deal-of-day-section">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="section-title text-center mb-4">
+                            <p class="section-tagline">Don't wait. The time will never be just right.</p>
+                            <h2 class="section-heading">Day of the deal</h2>
+                        </div>
+
+                        <div class="countdown-wrapper mx-auto mb-5">
+                            <div class="countdown-box">
+                                <span class="countdown-number">25</span>
+                                <span class="countdown-text">Days</span>
+                            </div>
+                            <span class="countdown-separator">:</span>
+                            <div class="countdown-box">
+                                <span class="countdown-number">23</span>
+                                <span class="countdown-text">Hours</span>
+                            </div>
+                            <span class="countdown-separator">:</span>
+                            <div class="countdown-box">
+                                <span class="countdown-number">59</span>
+                                <span class="countdown-text">Minutes</span>
+                            </div>
+                            <span class="countdown-separator">:</span>
+                            <div class="countdown-box">
+                                <span class="countdown-number">54</span>
+                                <span class="countdown-text">Seconds</span>
+                            </div>
+                        </div>
+
+                        <div class="products-slider-controls">
+                            <button class="slider-prev"><i class="fa fa-arrow-left"></i></button>
+                            <button class="slider-next"><i class="fa fa-arrow-right"></i></button>
+                        </div>
+
+                        <div class="products-row">
+                            <!-- Product 1 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-sale">Sale</div>
+                                <div class="product-thumb">
+                                    <img src="images/products/mixed-nuts.jpg" alt="Mixed Nuts Berries Pack">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Dried Fruits</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Mixed Nuts Berries Pack</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(4)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$56.00</span>
+                                        <span class="current-price">$45.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product 2 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-sale">Sale</div>
+                                <div class="product-thumb">
+                                    <img src="images/products/cookies.jpg" alt="Multi Grain Combo Cookies">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Cookies</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Multi Grain Combo Cookies</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(3)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$30.00</span>
+                                        <span class="current-price">$25.00</span>
+                                    </div>
+                                    <span class="product-unit">10kg</span>
+                                </div>
+                            </div>
+
+                            <!-- Product 3 -->
+                            <div class="product-card">
+                                <div class="product-thumb">
+                                    <img src="images/products/mango-juice.jpg" alt="Fresh Mango juice pack">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Foods</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Fresh Mango juice pack</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(2)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$65.00</span>
+                                        <span class="current-price">$46.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product 4 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-sale">Sale</div>
+                                <div class="product-thumb">
+                                    <img src="images/products/dates.jpg" alt="Dates Value Fresh Pouch">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Dried Fruits</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Dates Value Fresh Pouch</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(3)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$85.00</span>
+                                        <span class="current-price">$78.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product 5 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-new">New</div>
+                                <div class="product-thumb">
+                                    <img src="images/products/masala.jpg" alt="Stick Fiber Masala Magic">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Foods</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Stick Fiber Masala Magic</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(2)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$50.00</span>
+                                        <span class="current-price">$45.00</span>
+                                    </div>
+                                    <span class="product-unit">2pack</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Special Offer Banner -->
+        <section class="promotional-banner">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="banner-wrapper">
+                            <div class="banner-content1">
+                                <h2 class="banner-title">Fresh Fruits<br>Healthy Products</h2>
+                                <div class="banner-offer">30% off sale Hurry up!!!</div>
+                                <a href="#" class="btn-shop">Shop now</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- New Arrivals Section -->
+        <section class="new-arrivals-section">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="section-title text-center mb-4">
+                            <p class="section-tagline">Shop online for new arrivals and get free shipping!</p>
+                            <h2 class="section-heading">New Arrivals</h2>
+                        </div>
+
+                        <div class="tabs-wrapper text-center mb-5">
+                            <ul class="category-tabs nav justify-content-center">
+                                <li class="tab-item active"><a href="#" class="nav-link">All</a></li>
+                                <li class="tab-item"><a href="#" class="nav-link">Snack & Spices</a></li>
+                                <li class="tab-item"><a href="#" class="nav-link">Fruits</a></li>
+                                <li class="tab-item"><a href="#" class="nav-link">Vegetables</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="products-grid">
+                            <!-- Product 1 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-sale">Sale</div>
+                                <div class="product-thumb">
+                                    <img src="images/products/mixed-nuts.jpg" alt="Mixed Nuts Berries Pack">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Dried Fruits</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Mixed Nuts Berries Pack</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <span class="rating-count">(4)</span>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$56.00</span>
+                                        <span class="current-price">$45.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Additional Products -->
+                            <!-- Product 2 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-sale">Sale</div>
+                                <div class="product-thumb">
+                                    <img src="images/products/cookies.jpg" alt="Multi Grain Combo Cookies">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Cookies</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Multi Grain Combo Cookies</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$30.00</span>
+                                        <span class="current-price">$25.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product 3 -->
+                            <div class="product-card">
+                                <div class="product-thumb">
+                                    <img src="images/products/mango-juice.jpg" alt="Fresh Mango juice pack">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Foods</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Fresh Mango juice pack</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$65.00</span>
+                                        <span class="current-price">$46.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product 4 -->
+                            <div class="product-card">
+                                <div class="product-badge badge-sale">Sale</div>
+                                <div class="product-thumb">
+                                    <img src="images/products/dates.jpg" alt="Dates Value Fresh Pouch">
+                                    <div class="product-actions">
+                                        <button class="action-btn quick-view" title="Quick View"><i
+                                                class="fa fa-eye"></i></button>
+                                        <button class="action-btn add-to-wishlist" title="Add to Wishlist"><i
+                                                class="fa fa-heart"></i></button>
+                                        <button class="action-btn add-to-cart" title="Add to Cart"><i
+                                                class="fa fa-shopping-cart"></i></button>
+                                    </div>
+                                </div>
+                                <div class="product-info">
+                                    <a href="#" class="product-category">Dried Fruits</a>
+                                    <h5 class="product-title">
+                                        <a href="#">Dates Value Fresh Pouch</a>
+                                    </h5>
+                                    <div class="product-rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-o"></i>
+                                        <i class="fa fa-star-o"></i>
+                                    </div>
+                                    <div class="product-price">
+                                        <span class="old-price">$85.00</span>
+                                        <span class="current-price">$78.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dual Banner Section -->
+        <section class="dual-banner-section">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="banner-grid">
+                            <!-- First Banner -->
+                            <div class="promo-banner">
+                                <div class="banner-image">
+                                    <img src="images/banners/banner-fruits.jpg" alt="Tasty Snack & Fastfood">
+                                </div>
+                                <div class="banner-overlay"></div>
+                                <div class="banner-badge">70% Off</div>
+                                <div class="banner-content">
+                                    <h3>Tasty Snack<br>& Fastfood</h3>
+                                    <p>The flavor of something special</p>
+                                    <a href="#" class="btn-shop-now">Shop Now</a>
+                                </div>
+                            </div>
+
+                            <!-- Second Banner -->
+                            <div class="promo-banner">
+                                <div class="banner-image">
+                                    <img src="images/banners/banner-fastfood.jpg" alt="Fresh Fruits & veggies">
+                                </div>
+                                <div class="banner-overlay"></div>
+                                <div class="banner-badge">50% Off</div>
+                                <div class="banner-content">
+                                    <h3>Fresh Fruits<br>& Veggies</h3>
+                                    <p>A healthy meal for every one</p>
+                                    <a href="#" class="btn-shop-now">Shop Now</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section class="services-section">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="section-title text-center mb-5">
+                            <h2 class="section-heading">Why Shop With Us</h2>
+                            <p class="section-tagline">We offer the best customer experience</p>
+                        </div>
+                        <div class="services-grid">
+                            <!-- Service Cards 1-4 -->
+                            <!-- Service 1 -->
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <img src="images/icons/shipping.svg" alt="Free Shipping">
+                                </div>
+                                <h3 class="service-title">Free Shipping</h3>
+                                <p class="service-description">Free shipping on all US order or order above $200</p>
+                            </div>
+
+                            <!-- Service 2 -->
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <img src="images/icons/support.svg" alt="24X7 Support">
+                                </div>
+                                <h3 class="service-title">24X7 Support</h3>
+                                <p class="service-description">Contact us 24 hours a day, 7 days a week</p>
+                            </div>
+
+                            <!-- Service 3 -->
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <img src="images/icons/return.svg" alt="30 Days Return">
+                                </div>
+                                <h3 class="service-title">30 Days Return</h3>
+                                <p class="service-description">Simply return it within 30 days for an exchange</p>
+                            </div>
+
+                            <!-- Service 4 -->
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <img src="images/icons/payment.svg" alt="Payment Secure">
+                                </div>
+                                <h3 class="service-title">Payment Secure</h3>
+                                <p class="service-description">100% secure payment methods for your peace of mind</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Trending Items -->
+        <section class="featured-collections">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <!-- Products Columns -->
+                        <div class="trending-section">
+                            <div class="row">
+                                <!-- Banner Column -->
+                                <div class="col-md-3">
+                                    <div class="promo-box">
+                                        <h3>Our Top Most Products Check It Now</h3>
+                                        <button class="shop-now-btn">Shop Now</button>
+                                    </div>
+                                </div>
+
+                                <!-- Products Columns Area -->
+                                <div class="col-md-9">
+                                    <div class="row">
+                                        <!-- Trending Items Column -->
+                                        <div class="col-md-4">
+                                            <div class="products-column">
+                                                <div class="column-header">
+                                                    <div class="column-title">
+                                                        <h3>Trending <span>Items</span></h3>
+                                                    </div>
+                                                    <div class="column-nav">
+                                                        <button class="nav-prev"><i
+                                                                class="fa fa-angle-left"></i></button>
+                                                        <button class="nav-next"><i
+                                                                class="fa fa-angle-right"></i></button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="product-list">
+                                                    <!-- Product 1 -->
+                                                    <div class="product-item">
+                                                        <div class="product-image">
+                                                            <img src="images/products/nutmix.jpg" alt="Healthy Nutmix">
+                                                        </div>
+                                                        <div class="product-details">
+                                                            <h4>Healthy Nutmix, 200g Pack</h4>
+                                                            <span class="product-category">Driedfruit</span>
+                                                            <div class="product-price">
+                                                                <span class="current-price">$45.00</span>
+                                                                <span class="old-price">$49.00</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Product 2 -->
+                                                    <div class="product-item">
+                                                        <div class="product-image">
+                                                            <img src="images/products/tomato.jpg"
+                                                                alt="Organic Fresh Tomato">
+                                                        </div>
+                                                        <div class="product-details">
+                                                            <h4>Organic Fresh Tomato</h4>
+                                                            <span class="product-category">Vegetables</span>
+                                                            <div class="product-price">
+                                                                <span class="current-price">$30.00</span>
+                                                                <span class="old-price">$35.00</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Product 3 -->
+                                                    <div class="product-item">
+                                                        <div class="product-image">
+                                                            <img src="images/products/coffee.jpg"
+                                                                alt="Coffee With Chocolate Cream Mix">
+                                                        </div>
+                                                        <div class="product-details">
+                                                            <h4>Coffee With Chocolate Cream Mix</h4>
+                                                            <span class="product-category">Coffee</span>
+                                                            <div class="product-price">
+                                                                <span class="current-price">$65.00</span>
+                                                                <span class="old-price">$69.00</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Top Rated Column -->
+                                        <div class="col-md-4">
+                                            <div class="products-column">
+                                                <div class="column-header">
+                                                    <div class="column-title">
+                                                        <h3>Top <span>Rated</span></h3>
+                                                    </div>
+                                                    <div class="column-nav">
+                                                        <button class="nav-prev"><i
+                                                                class="fa fa-angle-left"></i></button>
+                                                        <button class="nav-next"><i
+                                                                class="fa fa-angle-right"></i></button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="product-list">
+                                                    <!-- Product 1 -->
+                                                    <div class="product-item">
+                                                        <div class="product-image">
+                                                            <img src="images/products/ginger.jpg"
+                                                                alt="Ginger - Organic">
+                                                        </div>
+                                                        <div class="product-details">
+                                                            <h4>Ginger - Organic</h4>
+                                                            <span class="product-category">Vegetables</span>
+                                                            <div class="product-price">
+                                                                <span class="current-price">$65.00</span>
+                                                                <span class="old-price">$69.00</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Product 2 -->
+                                                    <div class="product-item">
+                                                        <div class="product-image">
+                                                            <img src="images/products/dates.jpg"
+                                                                alt="Dates Value Pouch">
+                                                        </div>
+                                                        <div class="product-details">
+                                                            <h4>Dates Value Pouch Dates Value Po...</h4>
+                                                            <span class="product-category">Driedfruit</span>
+                                                            <div class="product-price">
+                                                                <span class="current-price">$78.00</span>
+                                                                <span class="old-price">$85.00</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Product 3 -->
+                                                    <div class="product-item">
+                                                        <div class="product-image">
+                                                            <img src="images/products/blueberry.jpg" alt="Blue Berry">
+                                                        </div>
+                                                        <div class="product-details">
+                                                            <h4>Blue Berry</h4>
+                                                            <span class="product-category">Fruits</span>
+                                                            <div class="product-price">
+                                                                <span class="current-price">$30.00</span>
+                                                                <span class="old-price">$35.00</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Top Selling Column -->
+                                        <div class="col-md-4">
+                                            <div class="products-column">
+                                                <div class="column-header">
+                                                    <div class="column-title">
+                                                        <h3>Top <span>Selling</span></h3>
+                                                    </div>
+                                                    <div class="column-nav">
+                                                        <button class="nav-prev"><i
+                                                                class="fa fa-angle-left"></i></button>
+                                                        <button class="nav-next"><i
+                                                                class="fa fa-angle-right"></i></button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="product-list">
+                                                    <!-- Product 1 -->
+                                                    <div class="product-item">
+                                                        <div class="product-image">
+                                                            <img src="images/products/lemon.jpg" alt="Lemon - Seedless">
+                                                        </div>
+                                                        <div class="product-details">
+                                                            <h4>Lemon - Seedless</h4>
+                                                            <span class="product-category">Vegetables</span>
+                                                            <div class="product-price">
+                                                                <span class="current-price">$45.00</span>
+                                                                <span class="old-price">$49.00</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Product 2 -->
+                                                    <div class="product-item">
+                                                        <div class="product-image">
+                                                            <img src="images/products/mango.jpg" alt="Mango - Kesar">
+                                                        </div>
+                                                        <div class="product-details">
+                                                            <h4>Mango - Kesar</h4>
+                                                            <span class="product-category">Fruits</span>
+                                                            <div class="product-price">
+                                                                <span class="current-price">$65.00</span>
+                                                                <span class="old-price">$69.00</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Product 3 -->
+                                                    <div class="product-item">
+                                                        <div class="product-image">
+                                                            <img src="images/products/mixed-nuts.jpg"
+                                                                alt="Mixed Nuts & Almonds Dry Fruits">
+                                                        </div>
+                                                        <div class="product-details">
+                                                            <h4>Mixed Nuts & Almonds Dry Fruits</h4>
+                                                            <span class="product-category">Driedfruit</span>
+                                                            <div class="product-price">
+                                                                <span class="current-price">$11.00</span>
+                                                                <span class="old-price">$19.00</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

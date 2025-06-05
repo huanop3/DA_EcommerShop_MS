@@ -1,15 +1,60 @@
 @page "/admin/products"
+@using BlazorWebApp.Pages.Admin.Dialogs
+@using Microsoft.AspNetCore.Authorization
 @using MudBlazor
+@using System.Security.Claims
+@using BlazorWebApp.Services
+@using ProductService.Models.ViewModel
+@using MainEcommerceService.Models.ViewModel
+@using MainEcommerceService.Models.dbMainEcommer
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject ProdService ProdService
+@inject CategoryService CategoryService
+@inject SellerProfileService SellerProfileService
+@inject UserService UserService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject SignalRService SignalRService
 @layout _AdminLayout
+@attribute [Authorize(Roles = "Admin,Seller")]
+@implements IAsyncDisposable
 
 <PageTitle>Products Management - Grabit</PageTitle>
-
 <MudGrid>
     <MudItem xs="12">
         <MudPaper Elevation="0" Class="d-flex align-center justify-space-between pa-4" Style="background-color: white; border-radius: 4px;">
-            <MudText Typo="Typo.h4">Products</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
-                      OnClick="@(() => OpenProductDialog())">Add Product</MudButton>
+            <div>
+                <MudText Typo="Typo.h4">Products</MudText>
+                <!-- Real-time Stats -->
+                <div class="d-flex align-center mt-2">
+                    <MudChip T="int?" Color="Color.Primary" Size="Size.Small" Class="mr-2">
+                        Total: @products.Count
+                    </MudChip>
+                    @if (recentUpdates > 0)
+                    {
+                        <MudChip T="int" Color="Color.Info" Size="Size.Small" Class="mr-2">
+                            Recent Updates: @recentUpdates
+                        </MudChip>
+                    }
+                    @if (lowStockCount > 0)
+                    {
+                        <MudChip T="int" Color="Color.Warning" Size="Size.Small" Class="mr-2">
+                            Low Stock: @lowStockCount
+                        </MudChip>
+                    }
+                    @if (lastUpdateTime.HasValue)
+                    {
+                        <MudText Typo="Typo.caption" Class="text-muted">
+                            Last updated: @lastUpdateTime.Value.ToString("HH:mm:ss")
+                        </MudText>
+                    }
+                </div>
+            </div>
+            @if (userRole == "Seller")
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+                          OnClick="@(() => OpenProductDialog())">Add Product</MudButton>
+            }
         </MudPaper>
     </MudItem>
 </MudGrid>
@@ -21,21 +66,15 @@
                 <MudItem xs="12" md="8">
                     <MudTextField Label="Search" @bind-Value="searchString" Placeholder="Search products..." 
                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
-                                 Immediate="true" Class="mt-0" />
+                                 Immediate="true" Class="mt-0" @onkeyup="@SearchProducts" />
                 </MudItem>
                 <MudItem xs="12" md="4" Class="d-flex justify-end">
-                    <MudSelect T="string" Label="Category" @bind-Value="selectedCategory" Class="mr-2">
-                        <MudSelectItem Value="@("")">All Categories</MudSelectItem>
+                    <MudSelect T="int?" Value="selectedCategoryId" Label="Category" Class="mr-2" ValueChanged="@FilterByCategory">
+                        <MudSelectItem T="int?" Value="@((int?)null)">All Categories</MudSelectItem>
                         @foreach (var category in categories)
                         {
-                            <MudSelectItem Value="@category">@category</MudSelectItem>
+                            <MudSelectItem T="int?" Value="@((int?)category.CategoryId)">@category.CategoryName</MudSelectItem>
                         }
-                    </MudSelect>
-                    <MudSelect T="string" Label="Sort By" @bind-Value="selectedSorting">
-                        <MudSelectItem Value="@("newest")">Newest</MudSelectItem>
-                        <MudSelectItem Value="@("price_asc")">Price: Low to High</MudSelectItem>
-                        <MudSelectItem Value="@("price_desc")">Price: High to Low</MudSelectItem>
-                        <MudSelectItem Value="@("name_asc")">Name: A-Z</MudSelectItem>
                     </MudSelect>
                 </MudItem>
             </MudGrid>
@@ -48,31 +87,63 @@
                     <MudTh>Product</MudTh>
                     <MudTh Style="width: 150px">Category</MudTh>
                     <MudTh Style="width: 100px">Price</MudTh>
-                    <MudTh Style="width: 100px">Stock</MudTh>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <MudTh Style="width: 150px">Seller</MudTh>
+                            <MudTh Style="width: 150px">StoreName</MudTh>
+                        </Authorized>
+                    </AuthorizeView>
                     <MudTh Style="width: 120px">Status</MudTh>
                     <MudTh Style="width: 100px; text-align: center">Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Product ID">@context.Id</MudTd>
+                    <MudTd DataLabel="Product ID">@context.ProductId</MudTd>
                     <MudTd DataLabel="Product">
                         <div class="d-flex align-center">
                             <MudAvatar Size="Size.Medium" Square="true" Class="mr-2" Style="border-radius: 4px;" 
-                                      Image="@context.ImageUrl"></MudAvatar>
-                            <MudText Typo="Typo.body1">@context.Name</MudText>
+                                      Image="https://via.placeholder.com/64x64/4CAF50/FFFFFF?text=P"></MudAvatar>
+                            <div>
+                                <MudText Typo="Typo.body1">@context.ProductName</MudText>
+                                @if (!string.IsNullOrEmpty(context.Description))
+                                {
+                                    <MudText Typo="Typo.caption" Class="text-muted">@(context.Description.Length > 50 ? context.Description.Substring(0, 50) + "..." : context.Description)</MudText>
+                                }
+                            </div>
                         </div>
                     </MudTd>
-                    <MudTd DataLabel="Category">@context.Category</MudTd>
-                    <MudTd DataLabel="Price">$@context.Price.ToString("F2")</MudTd>
-                    <MudTd DataLabel="Stock">@context.Stock</MudTd>
+                    <MudTd DataLabel="Category">@GetCategoryName(context.CategoryId)</MudTd>
+                    <MudTd DataLabel="Price">
+                        <div>
+                            @if (context.DiscountPrice.HasValue && context.DiscountPrice > 0)
+                            {
+                                <MudText Typo="Typo.body2" Style="text-decoration: line-through; color: #999;">$@context.Price.ToString("F2")</MudText>
+                                <MudText Typo="Typo.body1" Style="color: #f44336; font-weight: bold;">$@context.DiscountPrice.Value.ToString("F2")</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body1">$@context.Price.ToString("F2")</MudText>
+                            }
+                        </div>
+                    </MudTd>
+                    <AuthorizeView Roles="Admin" Context="authContext">
+                        <Authorized>
+                            <MudTd DataLabel="Seller">@GetSellerName(context.SellerId)</MudTd>
+                            
+                            <MudTd DataLabel="StoreName">@GetStoreName(context.SellerId)</MudTd>
+                        </Authorized>
+                    </AuthorizeView>
                     <MudTd DataLabel="Status">
-                        <MudChip T="string" Color="@GetStockStatusColor(context.Stock)" Size="Size.Small" 
+                        <MudChip T="string" Color="@GetStockStatusColor(context.Quantity)" Size="Size.Small" 
                                 Variant="Variant.Filled">
-                            @GetStockStatus(context.Stock)
+                            @GetStockStatus(context.Quantity)
                         </MudChip>
                     </MudTd>
                     <MudTd DataLabel="Actions">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" 
-                                      OnClick="@(() => OpenProductDialog(context))" />
+                        @if (userRole == "Seller" || userRole == "Admin")
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" 
+                                          OnClick="@(() => OpenProductDialog(context))" />
+                        }
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" 
                                       OnClick="@(() => DeleteProduct(context))" />
                     </MudTd>
@@ -85,36 +156,456 @@
     </MudItem>
 </MudGrid>
 
+<style>
+
+</style>
+
 @code {
     private bool isLoading = false;
     private string searchString = "";
-    private string selectedCategory = "";
-    private string selectedSorting = "newest";
-    private ProductModel selectedProduct = null;
+    private int? selectedCategoryId = null;
+    private string userRole = "";
+    private int userId = 0;
 
-    private List<string> categories = new List<string> {
-        "Dried Fruits", "Fresh Fruits", "Vegetables", "Cookies", "Drinks"
-    };
-    
-    private List<ProductModel> products = new List<ProductModel>
-    {
-        new ProductModel { Id = "PRD-001", Name = "Organic Apples", Category = "Fresh Fruits", Price = 12.99, Stock = 48, ImageUrl = "/images/products/apple.jpg" },
-        new ProductModel { Id = "PRD-002", Name = "Mixed Nuts Berries Pack", Category = "Dried Fruits", Price = 45.50, Stock = 5, ImageUrl = "/images/products/mixed-nuts.jpg" },
-        new ProductModel { Id = "PRD-003", Name = "Fresh Mango Juice Pack", Category = "Drinks", Price = 46.00, Stock = 3, ImageUrl = "/images/products/mango-juice.jpg" },
-        new ProductModel { Id = "PRD-004", Name = "Multi Grain Combo Cookies", Category = "Cookies", Price = 30.00, Stock = 25, ImageUrl = "/images/products/cookies.jpg" },
-        new ProductModel { Id = "PRD-005", Name = "Organic Broccoli", Category = "Vegetables", Price = 8.99, Stock = 36, ImageUrl = "/images/products/broccoli.jpg" },
-        new ProductModel { Id = "PRD-006", Name = "Almond Butter Jar", Category = "Dried Fruits", Price = 28.50, Stock = 19, ImageUrl = "/images/products/almond-butter.jpg" },
-        new ProductModel { Id = "PRD-007", Name = "Organic Bananas", Category = "Fresh Fruits", Price = 6.99, Stock = 52, ImageUrl = "/images/products/banana.jpg" },
-        new ProductModel { Id = "PRD-008", Name = "Fresh Orange Juice", Category = "Drinks", Price = 35.00, Stock = 15, ImageUrl = "/images/products/orange-juice.jpg" },
-    };
+    private int recentUpdates = 0;
+    private int lowStockCount = 0;
+    private DateTime? lastUpdateTime;
+    private Timer? cleanupTimer;
 
-    private IEnumerable<ProductModel> FilteredProducts => products
+    private List<ProductVM> products = new List<ProductVM>();
+    private List<CategoryVM> categories = new List<CategoryVM>();
+    private List<SellerProfileVM> sellers = new List<SellerProfileVM>();
+    private List<ProfileVM> userProfiles = new List<ProfileVM>();
+
+    private IEnumerable<ProductVM> FilteredProducts => products
         .Where(p => string.IsNullOrWhiteSpace(searchString) || 
-                   p.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-                   p.Id.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-                   p.Category.Contains(searchString, StringComparison.OrdinalIgnoreCase))
-        .Where(p => string.IsNullOrWhiteSpace(selectedCategory) || p.Category == selectedCategory)
-        .OrderByDescending(p => p.Id);
+                   (p.ProductName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true) ||
+                   (p.Description?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true));
+        
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize SignalR connection
+        await SignalRService.StartConnectionAsync();
+
+        // Subscribe to SignalR events
+        SignalRService.ProductCreated += OnProductCreated;
+        SignalRService.ProductUpdated += OnProductUpdated;
+        SignalRService.ProductDeleted += OnProductDeleted;
+        SignalRService.ProductStockChanged += OnProductStockChanged;
+        SignalRService.ProductPriceChanged += OnProductPriceChanged;
+        SignalRService.LowStockAlert += OnLowStockAlert;
+        SignalRService.CategoryCreated += OnCategoryCreated;
+        SignalRService.CategoryUpdated += OnCategoryUpdated;
+        SignalRService.CategoryDeleted += OnCategoryDeleted;
+
+        // Initialize cleanup timer
+        cleanupTimer = new Timer(CleanupOldNotifications, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+
+        await GetUserInfo();
+        await LoadCategories();
+        await LoadSellers();
+        await LoadProducts();
+        
+        // Calculate initial low stock count
+        CalculateLowStockCount();
+    }
+
+    #region SignalR Event Handlers
+
+    private async void OnProductCreated(int productId, string productName, string categoryName)
+    {
+        await InvokeAsync(async () =>
+        {
+            Snackbar.Add($"New Product Added: {productName} in {categoryName}", Severity.Success);
+            
+            recentUpdates++;
+            lastUpdateTime = DateTime.Now;
+            
+            await LoadProducts();
+            StateHasChanged();
+        });
+    }
+
+    private async void OnProductUpdated(int productId, string productName, decimal price)
+    {
+        await InvokeAsync(async () =>
+        {
+            Snackbar.Add($"Product Updated: {productName} - New price: ${price:F2}", Severity.Info);
+            
+            recentUpdates++;
+            lastUpdateTime = DateTime.Now;
+            
+            await LoadProducts();
+            StateHasChanged();
+        });
+    }
+
+    private async void OnProductDeleted(int productId, string productName)
+    {
+        await InvokeAsync(async () =>
+        {
+            Snackbar.Add($"Product Removed: {productName}", Severity.Warning);
+            
+            recentUpdates++;
+            lastUpdateTime = DateTime.Now;
+            
+            await LoadProducts();
+            CalculateLowStockCount();
+            StateHasChanged();
+        });
+    }
+
+    private async void OnProductStockChanged(int productId, string productName, int newStock)
+    {
+        await InvokeAsync(async () =>
+        {
+            Snackbar.Add($"Stock Updated: {productName} - {newStock} units", Severity.Info);
+            
+            recentUpdates++;
+            lastUpdateTime = DateTime.Now;
+            
+            var product = products.FirstOrDefault(p => p.ProductId == productId);
+            if (product != null)
+            {
+                product.Quantity = newStock;
+            }
+            
+            CalculateLowStockCount();
+            StateHasChanged();
+        });
+    }
+
+    private async void OnProductPriceChanged(int productId, string productName, decimal oldPrice, decimal newPrice)
+    {
+        await InvokeAsync(async () =>
+        {
+            Snackbar.Add($"Price Changed: {productName} from ${oldPrice:F2} to ${newPrice:F2}", Severity.Warning);
+            
+            recentUpdates++;
+            lastUpdateTime = DateTime.Now;
+            
+            var product = products.FirstOrDefault(p => p.ProductId == productId);
+            if (product != null)
+            {
+                product.Price = newPrice;
+            }
+            
+            StateHasChanged();
+        });
+    }
+
+    private async void OnLowStockAlert(int productId, string productName, int currentStock, int minStock)
+    {
+        await InvokeAsync(() =>
+        {
+            Snackbar.Add($"Low Stock Alert: {productName} - Only {currentStock} units left!", Severity.Error);
+            
+            CalculateLowStockCount();
+            lastUpdateTime = DateTime.Now;
+            
+            StateHasChanged();
+        });
+    }
+
+    private async void OnCategoryCreated(string categoryName)
+    {
+        await InvokeAsync(async () =>
+        {
+            Snackbar.Add($"New Category Added: {categoryName}", Severity.Success);
+            lastUpdateTime = DateTime.Now;
+            
+            await LoadCategories();
+            StateHasChanged();
+        });
+    }
+
+    private async void OnCategoryUpdated(int categoryId, string categoryName)
+    {
+        await InvokeAsync(async () =>
+        {
+            Snackbar.Add($"Category Updated: {categoryName}", Severity.Info);
+            lastUpdateTime = DateTime.Now;
+            
+            await LoadCategories();
+            StateHasChanged();
+        });
+    }
+
+    private async void OnCategoryDeleted(int categoryId, string categoryName)
+    {
+        await InvokeAsync(async () =>
+        {
+            Snackbar.Add($"Category Deleted: {categoryName}", Severity.Warning);
+            lastUpdateTime = DateTime.Now;
+            
+            await LoadCategories();
+            await LoadProducts();
+            StateHasChanged();
+        });
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private void CalculateLowStockCount()
+    {
+        lowStockCount = products.Count(p => p.Quantity <= 10);
+    }
+
+    private void CleanupOldNotifications(object state)
+    {
+        // Reset recent updates counter periodically
+        recentUpdates = 0;
+        InvokeAsync(StateHasChanged);
+    }
+
+    #endregion
+
+    // ...existing code for GetUserInfo, LoadCategories, LoadSellers, etc...
+
+    private async Task GetUserInfo()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity.IsAuthenticated)
+        {
+            userRole = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var userIdClaim = user.Claims.FirstOrDefault(c => c.Type == "UserId");
+            int.TryParse(userIdClaim?.Value, out userId);
+        }
+        
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            var result = await CategoryService.GetAllCategoriesAsync();
+            categories = result?.ToList() ?? new List<CategoryVM>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("No Categories found", Severity.Info);
+        }
+    }
+
+    private async Task LoadSellers()
+    {
+        if (userRole == "Admin")
+        {
+            try
+            {
+                var result = await SellerProfileService.GetAllSellerProfilesAsync();
+                sellers = result ?? new List<SellerProfileVM>();
+                await LoadSellerUserNames();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("No Sellers found", Severity.Info);
+            }
+        }
+    }
+     private async Task LoadSellerUserNames()
+    {
+        try
+        {
+            foreach (var seller in sellers)
+            {
+                try
+                {
+                    var result = await UserService.GetProfileAsync(seller.UserId);
+                    userProfiles.Add(result ?? new ProfileVM());
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading user name for seller {seller.SellerId}: {ex.Message}");
+
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading seller user names: {ex.Message}");
+        }
+    }
+    private async Task LoadProducts()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged(); // Thêm dòng này để force re-render
+            
+            if (userRole == "Admin")
+            {
+                var result = await ProdService.GetAllProductsAsync();
+                products = result?.ToList() ?? new List<ProductVM>();
+            }
+            else if (userRole == "Seller")
+            {
+                var sellerProfile = await SellerProfileService.GetSellerProfileByUserIdAsync(userId);
+                if (sellerProfile == null)
+                {
+                    Snackbar.Add("No Seller Profile found for this user", Severity.Warning);
+                    return;
+                }
+                var result = await ProdService.GetProductsBySellerAsync(sellerProfile.SellerId);
+                products = result?.ToList() ?? new List<ProductVM>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("No Products found", Severity.Info);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged(); // Thêm dòng này để force re-render
+        }
+    }
+
+    private async Task SearchProducts(KeyboardEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(searchString) && searchString.Length >= 3)
+        {
+            try
+            {
+                isLoading = true;
+                StateHasChanged(); // Thêm dòng này
+                
+                var searchResults = await ProdService.SearchProductsAsync(searchString);
+                
+                if (userRole == "Seller")
+                {
+                    var sellerProfile = await SellerProfileService.GetSellerProfileByUserIdAsync(userId);
+                    if (sellerProfile == null)
+                    {
+                        Snackbar.Add("No Seller Profile found for this user", Severity.Warning);
+                        return;
+                    }
+                    searchResults = searchResults?.Where(p => p.SellerId == sellerProfile.SellerId);
+                }
+
+                products = searchResults?.ToList() ?? new List<ProductVM>();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("No Products found", Severity.Info);
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged(); // Thêm dòng này
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(searchString))
+        {
+            await LoadProducts();
+        }
+    }
+
+    private async Task FilterByCategory(int? categoryId)
+    {
+        selectedCategoryId = categoryId;
+        
+        if (selectedCategoryId.HasValue)
+        {
+            try
+            {
+                isLoading = true;
+                StateHasChanged(); // Thêm dòng này
+                Console.WriteLine($"Filtering products by category ID: {selectedCategoryId.Value}");
+                var categoryProducts = await ProdService.GetProductsByCategoryAsync(selectedCategoryId.Value);
+                if (userRole == "Seller")
+                {
+                    var sellerProfile = await SellerProfileService.GetSellerProfileByUserIdAsync(userId);
+                    if (sellerProfile == null)
+                    {
+                        Snackbar.Add("No Seller Profile found for this user", Severity.Warning);
+                        return;
+                    }
+                    categoryProducts = categoryProducts?.Where(p => p.SellerId == sellerProfile.SellerId);
+                }
+
+                products = categoryProducts?.ToList() ?? new List<ProductVM>();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("No Products found", Severity.Info);
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged(); // Thêm dòng này
+            }
+        }
+        else
+        {
+            await LoadProducts();
+        }
+    }
+
+    private async Task OpenProductDialog(ProductVM product = null)
+    {
+        var parameters = new DialogParameters<ProductDialog>();
+        parameters.Add(x => x.Product, product);
+        parameters.Add(x => x.Categories, categories);
+        parameters.Add(x => x.UserId, userId);
+
+        var options = new DialogOptions() 
+        { 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true, 
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ProductDialog>(
+            product?.ProductId > 0 ? "Edit Product" : "Add New Product", 
+            parameters, 
+            options);
+        
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            // Refresh product list after successful save
+            await LoadProducts();
+        }
+    }
+
+    private async Task DeleteProduct(ProductVM product)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete Product",
+            $"Are you sure you want to delete '{product.ProductName}'?",
+            yesText:"Delete", cancelText:"Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                var deleteResult = await ProdService.DeleteProductAsync(product.ProductId);
+                if (deleteResult)
+                {
+                    // Send SignalR notification for product deletion
+                    await SignalRService.NotifyProductDeletedAsync(product.ProductId, product.ProductName);
+                    
+                    Snackbar.Add("Product deleted successfully!", Severity.Success);
+                    await LoadProducts();
+                }
+                else
+                {
+                    Snackbar.Add("Failed to delete product", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error deleting product", Severity.Error);
+            }
+        }
+    }
 
     private string GetStockStatus(int stock)
     {
@@ -136,25 +627,48 @@
         };
     }
 
-    private void OpenProductDialog(ProductModel product = null)
+    private string GetCategoryName(int categoryId)
     {
-        selectedProduct = product;
-        // In a real app, you'd open a dialog to edit or add a product
+        var category = categories?.FirstOrDefault(c => c.CategoryId == categoryId);
+        return category?.CategoryName ?? "Unknown";
     }
 
-    private void DeleteProduct(ProductModel product)
+    private string GetStoreName(int sellerId)
     {
-        // In a real app, you'd prompt for confirmation and delete from database
+        var seller = sellers?.FirstOrDefault(s => s.SellerId == sellerId);
+        Console.WriteLine($"Getting store name for sellerId: {sellerId} : {seller?.StoreName}");
+
+        return seller?.StoreName ?? "Unknown Store";   
+    }
+    private string GetSellerName(int sellerId)
+    {
+        var userId = sellers?.FirstOrDefault(s => s.SellerId == sellerId)?.UserId;
+        var userProfile = userProfiles?.FirstOrDefault(up => up.Id == userId);
+        return userProfile?.UserName ?? "Unknown Seller";
     }
 
-    public class ProductModel
+    public async ValueTask DisposeAsync()
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Category { get; set; }
-        public double Price { get; set; }
-        public int Stock { get; set; }
-        public string ImageUrl { get; set; }
+        // Unsubscribe from SignalR events
+        SignalRService.ProductCreated -= OnProductCreated;
+        SignalRService.ProductUpdated -= OnProductUpdated;
+        SignalRService.ProductDeleted -= OnProductDeleted;
+        SignalRService.ProductStockChanged -= OnProductStockChanged;
+        SignalRService.ProductPriceChanged -= OnProductPriceChanged;
+        SignalRService.LowStockAlert -= OnLowStockAlert;
+        SignalRService.CategoryCreated -= OnCategoryCreated;
+        SignalRService.CategoryUpdated -= OnCategoryUpdated;
+        SignalRService.CategoryDeleted -= OnCategoryDeleted;
+
+        // Dispose timer
+        cleanupTimer?.Dispose();
+
+        // Dispose SignalR service if needed
+        if (SignalRService != null)
+        {
+            await SignalRService.DisposeAsync();
+        }
     }
+
 }
 

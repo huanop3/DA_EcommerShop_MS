@@ -39,6 +39,30 @@
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="/js/cookieHelper.js"></script>
     <script src="/js/deviceInfo.js"></script>
+    <!-- Thêm vào _Layout.cshtml -->
+    <script>
+        window.addEventListener('load', function () {
+            console.log('Force reload navigation initialized');
+            
+            // 1. Override tất cả link clicks
+            document.addEventListener('click', function (e) {
+                const link = e.target.closest('a[href]');
+                if (link && link.href && link.href.startsWith(window.location.origin)) {
+                    console.log('Link clicked, forcing reload to:', link.href);
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    window.location.href = link.href;
+                }
+            }, true);
+            
+            // 2. Override browser back/forward buttons (popstate)
+            window.addEventListener('popstate', function(e) {
+                console.log('Browser navigation detected, forcing reload to:', window.location.href);
+                // Force reload when back/forward buttons are used
+                window.location.reload();
+            });            
+        });
+    </script>
 </body>
 
 </html>

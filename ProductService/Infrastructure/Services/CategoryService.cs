@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.SignalR;
-using MainEcommerceService.Hubs;
 using MainEcommerceService.Models.ViewModel;
 using Microsoft.EntityFrameworkCore;
 using ProductService.Models.dbProduct;
+using ProductService.Hubs;
 
 public interface ICategoryService
 {

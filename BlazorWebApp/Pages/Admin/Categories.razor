@@ -147,8 +147,9 @@
             SignalRService.CategoryUpdated += OnCategoryUpdated;
             SignalRService.CategoryDeleted += OnCategoryDeleted;
 
+
             // Start connection if not already connected
-            if (!SignalRService.IsConnected)
+            if (!SignalRService.IsProductHubConnected)
             {
                 await SignalRService.StartConnectionAsync();
             }
@@ -179,12 +180,12 @@
         });
     }
 
-    private async void OnCategoryDeleted(int categoryId)
+    private async void OnCategoryDeleted(int categoryId, string categoryName)
     {
         await InvokeAsync(async () =>
         {
             await LoadCategoriesAsync();
-            Snackbar.Add("A category was deleted by another admin", Severity.Info);
+            Snackbar.Add($"Category '{categoryName}' deleted by another admin", Severity.Info);
             StateHasChanged();
         });
     }
@@ -286,6 +287,7 @@
                         try
                         {
                             await SignalRService.NotifyCategoryCreatedAsync(categoryName);
+
                         }
                         catch (Exception ex)
                         {
@@ -367,7 +369,7 @@
                 {
                     try
                     {
-                        await SignalRService.NotifyCategoryDeletedAsync(category.CategoryId);
+                        await SignalRService.NotifyCategoryDeletedAsync(category.CategoryId,category.CategoryName);
                     }
                     catch (Exception ex)
                     {

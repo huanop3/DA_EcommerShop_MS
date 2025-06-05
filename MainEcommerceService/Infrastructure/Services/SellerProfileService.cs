@@ -5,6 +5,7 @@ using MainEcommerceService.Helper;
 using MainEcommerceService.Models.dbMainEcommer;
 using MainEcommerceService.Models.ViewModel;
 using Microsoft.EntityFrameworkCore;
+using MainEcommerceService.Kafka;
 
 public interface ISellerProfileService
 {
@@ -19,6 +20,7 @@ public interface ISellerProfileService
     Task<HTTPResponseClient<IEnumerable<SellerProfileVM>>> GetVerifiedSellerProfiles();
     Task<HTTPResponseClient<bool>> CheckUserHasSellerProfile(int userId);
     Task<HTTPResponseClient<IEnumerable<SellerProfileVM>>> GetPendingVerificationProfiles();
+
 }
 
 public class SellerProfileService : ISellerProfileService
@@ -26,15 +28,21 @@ public class SellerProfileService : ISellerProfileService
     private readonly IUnitOfWork _unitOfWork;
     private readonly RedisHelper _cacheService;
     private readonly IHubContext<NotificationHub> _hubContext;
+    private readonly IKafkaProducerService _kafkaProducer;
+    private readonly ILogger<SellerProfileService> _logger;
 
     public SellerProfileService(
         IUnitOfWork unitOfWork,
         RedisHelper cacheService,
-        IHubContext<NotificationHub> hubContext)
+        IHubContext<NotificationHub> hubContext,
+        IKafkaProducerService kafkaProducer,
+        ILogger<SellerProfileService> logger)
     {
         _unitOfWork = unitOfWork;
         _cacheService = cacheService;
         _hubContext = hubContext;
+        _kafkaProducer = kafkaProducer;
+        _logger = logger;
     }
 
     public async Task<HTTPResponseClient<IEnumerable<SellerProfileVM>>> GetAllSellerProfiles()
@@ -240,7 +248,17 @@ public class SellerProfileService : ISellerProfileService
                 response.Message = "Người dùng đã có seller profile";
                 return response;
             }
-            
+            // Kiểm tra user có seller profile bị xóa không và không cho tao tạo mới nếu đã bị xóa
+            // Nếu có seller profile đã bị xóa, không cho tạo mới
+            var deletedProfile = await _unitOfWork._sellerProfileRepository.Query()
+                .FirstOrDefaultAsync(s => s.UserId == sellerProfileVM.UserId && s.IsDeleted == true);
+            if (deletedProfile != null)
+            {
+                response.Success = false;
+                response.StatusCode = 400;
+                response.Message = "Người dùng đã có seller profile bị xóa, không thể tạo mới";
+                return response;
+            }
             // Kiểm tra user có tồn tại không
             var user = await _unitOfWork._userRepository.GetByIdAsync(sellerProfileVM.UserId);
             if (user == null)
@@ -320,11 +338,11 @@ public class SellerProfileService : ISellerProfileService
                 response.Message = "Không tìm thấy seller profile";
                 return response;
             }
-    
+
             // Kiểm tra tên store có bị trùng không (ngoại trừ chính nó)
             var existingStore = await _unitOfWork._sellerProfileRepository.Query()
-                .FirstOrDefaultAsync(s => s.StoreName == sellerProfileVM.StoreName && 
-                                         s.SellerId != sellerProfileVM.SellerId && 
+                .FirstOrDefaultAsync(s => s.StoreName == sellerProfileVM.StoreName &&
+                                         s.SellerId != sellerProfileVM.SellerId &&
                                          s.IsDeleted == false);
 
             if (existingStore != null)
@@ -390,11 +408,35 @@ public class SellerProfileService : ISellerProfileService
             sellerProfile.IsDeleted = true;
             sellerProfile.UpdatedAt = DateTime.Now;
             _unitOfWork._sellerProfileRepository.Update(sellerProfile);
-
+            
             await _unitOfWork.SaveChangesAsync();
 
-            // Commit transaction khi tất cả thành công
+            // Commit transaction trước khi gửi Kafka message
             await _unitOfWork.CommitTransaction();
+
+            // Gửi message tới Kafka để xóa các sản phẩm liên quan
+            try
+            {
+                var sellerDeletedMessage = new SellerProfileVM
+                {
+                    SellerId = sellerProfile.SellerId,
+                    UserId = sellerProfile.UserId,
+                    StoreName = sellerProfile.StoreName,
+                };
+
+                await _kafkaProducer.SendMessageAsync(
+                    "seller-events", 
+                    $"seller-{sellerProfile.SellerId}", 
+                    sellerDeletedMessage);
+
+                _logger.LogInformation("Sent seller deleted message to Kafka for seller {SellerId}", sellerId);
+            }
+            catch (Exception kafkaEx)
+            {
+                // Log lỗi Kafka nhưng không rollback transaction
+                _logger.LogError(kafkaEx, "Failed to send seller deleted message to Kafka for seller {SellerId}", sellerId);
+                // Có thể implement retry mechanism hoặc dead letter queue ở đây
+            }
 
             // Xóa cache đầy đủ
             await InvalidateAllSellerProfileCaches(sellerId, sellerProfile.UserId);

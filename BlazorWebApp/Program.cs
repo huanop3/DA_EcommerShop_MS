@@ -5,6 +5,7 @@ using BlazorWebApp.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.IdentityModel.Tokens;
 using MudBlazor.Services;
@@ -64,16 +65,15 @@ builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<CouponService>();
 builder.Services.AddScoped<AddressService>();
 builder.Services.AddScoped<SellerProfileService>();
+builder.Services.AddScoped<ProdService>();
 // Register MudBlazor services
 builder.Services.AddMudServices();
 // Thêm vào Program.cs trước dòng var app = builder.Build()
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToastService>();
-builder.Services.AddScoped<AuthHttpClientHandler>();
-builder.Services.AddHttpClient<LoginService>()
-    .AddHttpMessageHandler<AuthHttpClientHandler>();
 // Authorization
 builder.Services.AddAuthorizationCore();
+
 var app = builder.Build();
 
 

@@ -193,7 +193,7 @@
     protected override async Task OnInitializedAsync()
     {
         // Đảm bảo kết nối SignalR được thiết lập
-        if (!SignalRService.IsConnected)
+        if (!SignalRService.IsMainHubConnected)
         {
             await SignalRService.StartConnectionAsync();
         }

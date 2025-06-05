@@ -1,6 +1,9 @@
-<link rel="stylesheet" href="css/site.css" />
+@using MainEcommerceService.Models.ViewModel
+@inject CategoryService CategoryService
+@inject NavigationManager Navigation
 
 <footer class="footer">
+    <link rel="stylesheet" href="css/sitefooter.css" />
     <div class="footer-main">
         <div class="container1">
             <div class="footer-row">
@@ -14,26 +17,35 @@
                     <p class="footer-description">
                         Grabit is the biggest market of grocery products. Get your daily needs from our store.
                     </p>
-                    <div class="app-buttons">
-                        <a href="#" class="app-button" title="Download Android App">
-                            <img src="/images/header/android.png" alt="Android App">
-                        </a>
-                        <a href="#" class="app-button" title="Download iOS App">
-                            <img src="/images/header/apple.png" alt="iOS App">
-                        </a>
-                    </div>
                 </div>
 
                 <!-- Category Links -->
                 <div class="footer-col">
                     <h4 class="footer-heading">Category</h4>
                     <ul class="footer-links">
-                        <li><a href="/category/dried-fruit">Dried Fruit</a></li>
-                        <li><a href="/category/cookies">Cookies</a></li>
-                        <li><a href="/category/foods">Foods</a></li>
-                        <li><a href="/category/fresh-fruit">Fresh Fruit</a></li>
-                        <li><a href="/category/tuber-root">Tuber root</a></li>
-                        <li><a href="/category/vegetables">Vegetables</a></li>
+                        @if (isLoadingCategories)
+                        {
+                            <li><span class="text-muted">Loading categories...</span></li>
+                        }
+                        else if (categories?.Any() == true)
+                        {
+                            @foreach (var category in categories.Take(6))
+                            {
+                                <li>
+                                    <a href="@GetCategoryUrl(category)" @onclick="() => NavigateToCategory(category)">
+                                        @category.CategoryName
+                                    </a>
+                                </li>
+                            }
+                            @if (categories.Count() > 6)
+                            {
+                                <li><a href="/products" class="view-all-link">View All Categories</a></li>
+                            }
+                        }
+                        else
+                        {
+                            <li><span class="text-muted">No categories available</span></li>
+                        }
                     </ul>
                 </div>
 
@@ -110,3 +122,66 @@
         </div>
     </div>
 </footer>
+
+@code {
+    private IEnumerable<CategoryVM> categories = new List<CategoryVM>();
+    private bool isLoadingCategories = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategoriesAsync();
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        try
+        {
+            isLoadingCategories = true;
+            categories = await CategoryService.GetAllCategoriesAsync();
+            
+            // Chỉ lấy parent categories hoặc tất cả categories tùy theo yêu cầu
+            if (categories?.Any() == true)
+            {
+                // Option 1: Chỉ lấy parent categories (categories không có parent)
+                categories = categories.Where(c => c.ParentCategoryId == null).OrderBy(c => c.CategoryName);
+                
+                // Option 2: Lấy tất cả categories (bỏ comment dòng dưới nếu muốn hiển thị tất cả)
+                // categories = categories.OrderBy(c => c.CategoryName);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading categories: {ex.Message}");
+            categories = new List<CategoryVM>();
+        }
+        finally
+        {
+            isLoadingCategories = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetCategoryUrl(CategoryVM category)
+    {
+        // Tạo slug từ category name
+        var slug = category.CategoryName
+            .ToLower()
+            .Replace(" ", "-")
+            .Replace("&", "and")
+            .Replace("/", "-")
+            .Replace("\\", "-")
+            .Replace("(", "")
+            .Replace(")", "")
+            .Replace("'", "")
+            .Replace("\"", "")
+            .Trim('-');
+            
+        return $"/products/{slug}";
+    }
+
+    private void NavigateToCategory(CategoryVM category)
+    {
+        var url = GetCategoryUrl(category);
+        Navigation.NavigateTo(url);
+    }
+}

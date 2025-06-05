@@ -4,6 +4,7 @@ using ProductService.Models.dbProduct;
 public interface IUnitOfWork : IAsyncDisposable
 {
     public ICategoryRepository _categoryRepository { get; }
+    public IProductRepository _prodRepository { get; }
     Task BeginTransaction();
     Task CommitTransaction();
     Task RollbackTransaction();
@@ -15,11 +16,13 @@ public class UnitOfWork : IUnitOfWork
 {
     private readonly ProductDBContext _context;
     public ICategoryRepository _categoryRepository { get; }
+    public IProductRepository _prodRepository { get; }
 
-    public UnitOfWork(ProductDBContext context, ICategoryRepository categoryRepository)
+    public UnitOfWork(ProductDBContext context, ICategoryRepository categoryRepository, IProductRepository prodRepository)
     {
         _context = context;
         _categoryRepository = categoryRepository;
+        _prodRepository = prodRepository;
     }
     public async Task BeginTransaction()
     {

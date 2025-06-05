@@ -14,20 +14,22 @@ using web_api_base.Models.ViewModel;
 public class CustomAuthStateProvider : AuthenticationStateProvider
 {
     private readonly ILocalStorageService _localStorage;
+    private readonly HttpClient _httpClient;
     private readonly JwtSecurityTokenHandler _tokenHandler = new JwtSecurityTokenHandler();
     private readonly SemaphoreSlim _refreshSemaphore = new SemaphoreSlim(1, 1);
     private bool _isRefreshing = false;
 
-    public CustomAuthStateProvider(ILocalStorageService localStorage)
+    public CustomAuthStateProvider(ILocalStorageService localStorage, HttpClient httpClient)
     {
         _localStorage = localStorage;
+        _httpClient = httpClient;
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        // Lấy token từ localStorage
-        var token = await _localStorage.GetItemAsync<string>("token");
-        
+        // Lấy token từ localStorage sử dụng GetItemAsStringAsync
+        var token = await _localStorage.GetItemAsStringAsync("token");
+
         // Trường hợp không có token => Không đăng nhập
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -42,27 +44,20 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             // Đọc token để kiểm tra expiry trước khi validate
             if (_tokenHandler.CanReadToken(token))
             {
-                var jsonToken = _tokenHandler.ReadJwtToken(token);
-                
-                // Nếu token sắp hết hạn (còn dưới 5 phút), thử refresh
-                if (jsonToken.ValidTo <= DateTime.UtcNow.AddMinutes(5))
+                var refreshSuccess = await TryRefreshToken();
+
+                if (refreshSuccess)
                 {
-                    Console.WriteLine("🔄 Token sắp hết hạn, attempting refresh trong AuthStateProvider...");
-                    var refreshSuccess = await TryRefreshToken();
-                    
-                    if (refreshSuccess)
-                    {
-                        // Lấy token mới sau khi refresh
-                        token = await _localStorage.GetItemAsync<string>("token");
-                        token = CleanToken(token);
-                        Console.WriteLine("✅ Token refreshed successfully on AuthStateProvider");
-                    }
-                    else
-                    {
-                        Console.WriteLine("❌ Token refresh failed on AuthStateProvider");
-                        await ClearAuthData();
-                        return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
-                    }
+                    // Lấy token mới sau khi refresh
+                    token = await _localStorage.GetItemAsync<string>("token");
+                    token = CleanToken(token);
+                    Console.WriteLine("✅ Token refreshed successfully on AuthStateProvider");
+                }
+                else
+                {
+                    Console.WriteLine("❌ Token refresh failed on AuthStateProvider");
+                    await ClearAuthData();
+                    return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
                 }
             }
 
@@ -83,7 +78,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
 
             // Giải mã token để xác thực
             var principal = _tokenHandler.ValidateToken(token, tokenValidationParameters, out _);
-            
+
             // Trả về trạng thái xác thực
             return new AuthenticationState(principal);
         }
@@ -91,7 +86,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         {
             Console.WriteLine("Token expired, attempting refresh...");
             var refreshSuccess = await TryRefreshToken();
-            
+
             if (refreshSuccess)
             {
                 // Retry validation với token mới
@@ -138,37 +133,37 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                 RefreshToken = CleanToken(refreshToken)
             };
 
-            // Tạo HttpClient riêng để tránh circular dependency
-            using var httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("http://localhost:5166/");
-            
-            var response = await httpClient.PostAsJsonAsync("api/UserLogin/refresh-Token", loginCheck);
+            var response = await _httpClient.PostAsJsonAsync("https://localhost:7260/api/UserLogin/refresh-Token", loginCheck);
 
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<UserLoginResponseVM>>();
-                
+
                 if (result?.Success == true)
                 {
                     switch (result.StatusCode)
                     {
                         case 201: // Token refreshed successfully
-                            await _localStorage.SetItemAsync("token", result.Data.AccessToken);
-                            await _localStorage.SetItemAsync("refreshToken", result.Data.RefreshToken);
+                            // Sử dụng SetItemAsStringAsync để tránh serialize thêm dấu ngoặc kép
+                            var cleanAccessToken = CleanToken(result.Data.AccessToken);
+                            var cleanRefreshToken = CleanToken(result.Data.RefreshToken);
+
+                            await _localStorage.SetItemAsStringAsync("token", cleanAccessToken);
+                            await _localStorage.SetItemAsStringAsync("refreshToken", cleanRefreshToken);
                             Console.WriteLine("✅ AuthStateProvider: Token refreshed successfully");
                             return true;
-                            
+
                         case 401: // Refresh token expired
                             Console.WriteLine("🔒 AuthStateProvider: Refresh token expired");
                             return false;
-                            
+
                         case 200: // Token still valid
                             Console.WriteLine("✅ AuthStateProvider: Token still valid");
                             return true;
                     }
                 }
             }
-            
+
             return false;
         }
         catch (Exception ex)
@@ -187,15 +182,15 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     {
         try
         {
-            var token = await _localStorage.GetItemAsync<string>("token");
+            var token = await _localStorage.GetItemAsStringAsync("token");
             if (string.IsNullOrEmpty(token)) return null;
 
             token = CleanToken(token);
-            
+
             if (!_tokenHandler.CanReadToken(token)) return null;
 
             var jsonToken = _tokenHandler.ReadJwtToken(token);
-            var usernameClaim = jsonToken.Claims.FirstOrDefault(x => 
+            var usernameClaim = jsonToken.Claims.FirstOrDefault(x =>
                 x.Type == "unique_name" || x.Type == "username" || x.Type == "sub" || x.Type == ClaimTypes.Name);
             return usernameClaim?.Value;
         }
@@ -209,7 +204,16 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     private string CleanToken(string token)
     {
         if (string.IsNullOrEmpty(token)) return token;
-        return token.StartsWith("\"") && token.EndsWith("\"") ? token.Trim('"') : token;
+
+        // Loại bỏ dấu ngoặc kép ở đầu và cuối
+        token = token.Trim('"');
+        if (token.StartsWith("\"") && token.EndsWith("\""))
+        {
+            token = token.Trim('"');
+        }
+
+        // Loại bỏ khoảng trắng thừa
+        return token.Trim();
     }
 
     private async Task ClearAuthData()
@@ -220,6 +224,9 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
 
     public async Task MarkUserAsAuthenticated(string token)
     {
+        // Sử dụng SetItemAsStringAsync để tránh serialize thêm dấu ngoặc kép
+        var cleanToken = CleanToken(token);
+        await _localStorage.SetItemAsStringAsync("token", cleanToken);
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 

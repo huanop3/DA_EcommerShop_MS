@@ -14,12 +14,28 @@ namespace BlazorWebApp.Services
             _localStorage = localStorage;
         }
 
+        private async Task SetAuthorizationHeader()
+        {
+            var token = await _localStorage.GetItemAsStringAsync("token");
+            if (string.IsNullOrEmpty(token))
+            {
+                // Nếu không có token, thử refresh
+                token = await _localStorage.GetItemAsStringAsync("refreshToken");
+            }
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+        }
 
         public async Task<IEnumerable<AddressVM>> GetAllAddressesAsync()
         {
+            await SetAuthorizationHeader();
             try
             {
-                var response = await _httpClient.GetAsync($"http://localhost:5166/api/Address/GetAllAddresses");
+                var response = await _httpClient.GetAsync($"https://localhost:7260/api/Address/GetAllAddresses");
                 response.EnsureSuccessStatusCode();
                 var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<IEnumerable<AddressVM>>>();
                 
@@ -38,21 +54,22 @@ namespace BlazorWebApp.Services
 
         public async Task<IEnumerable<AddressVM>> GetAddressesByUserIdAsync(int userId)
         {
+            await SetAuthorizationHeader();
             try
             {
-                var response = await _httpClient.GetAsync($"http://localhost:5166/api/Address/GetAddressesByUserId?userId={userId}");
-                
+                var response = await _httpClient.GetAsync($"https://localhost:7260/api/Address/GetAddressesByUserId?userId={userId}");
+
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<IEnumerable<AddressVM>>>();
-                    
+
                     if (result != null && result.Success && result.Data != null)
                     {
                         // Lấy ra các address có IsDeleted != true
                         return result.Data.Where(address => address.IsDeleted != true);
                     }
                 }
-                
+
                 // Trả về empty list thay vì null khi không có data hoặc có lỗi
                 return new List<AddressVM>();
             }
@@ -65,12 +82,13 @@ namespace BlazorWebApp.Services
 
         public async Task<AddressVM> GetAddressByIdAsync(int addressId)
         {
+            await SetAuthorizationHeader();
             try
             {
-                var response = await _httpClient.GetAsync($"http://localhost:5166/api/Address/GetAddressById?addressId={addressId}");
+                var response = await _httpClient.GetAsync($"https://localhost:7260/api/Address/GetAddressById?addressId={addressId}");
                 response.EnsureSuccessStatusCode();
                 var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<AddressVM>>();
-                
+
                 if (result != null && result.Success)
                 {
                     return result.Data;
@@ -85,12 +103,13 @@ namespace BlazorWebApp.Services
 
         public async Task<bool> CreateAddressAsync(AddressVM address)
         {
+            await SetAuthorizationHeader();
             try
             {
-                
+
                 // Kiểm tra xem user đã có địa chỉ nào chưa
                 var existingAddresses = await GetAddressesByUserIdAsync(address.UserId);
-                
+
                 // Nếu đây là địa chỉ đầu tiên, tự động set làm default
                 if (!existingAddresses.Any())
                 {
@@ -102,15 +121,15 @@ namespace BlazorWebApp.Services
                     // Unset tất cả địa chỉ default khác trước
                     await UnsetOtherDefaultAddresses(address.UserId);
                 }
-                
-                var response = await _httpClient.PostAsJsonAsync($"http://localhost:5166/api/Address/CreateAddress", address);
-                
+
+                var response = await _httpClient.PostAsJsonAsync($"https://localhost:7260/api/Address/CreateAddress", address);
+
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
                     return result?.Success ?? false;
                 }
-                
+
                 return false;
             }
             catch (Exception)
@@ -121,19 +140,20 @@ namespace BlazorWebApp.Services
 
         public async Task<bool> UpdateAddressAsync(AddressVM address)
         {
+            await SetAuthorizationHeader();
             try
             {
-                
+
                 // Nếu user muốn set làm default, cần unset địa chỉ default cũ
                 if (address.IsDefault == true)
                 {
                     await UnsetOtherDefaultAddresses(address.UserId, address.AddressId);
                 }
-                
-                var response = await _httpClient.PutAsJsonAsync($"http://localhost:5166/api/Address/UpdateAddress", address);
+
+                var response = await _httpClient.PutAsJsonAsync($"https://localhost:7260/api/Address/UpdateAddress", address);
                 response.EnsureSuccessStatusCode();
                 var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
-                
+
                 if (result != null)
                 {
                     return result.Success;
@@ -148,12 +168,13 @@ namespace BlazorWebApp.Services
 
         public async Task<bool> DeleteAddressAsync(int addressId)
         {
+            await SetAuthorizationHeader();
             try
             {
-                var response = await _httpClient.DeleteAsync($"http://localhost:5166/api/Address/DeleteAddress?addressId={addressId}");
+                var response = await _httpClient.DeleteAsync($"https://localhost:7260/api/Address/DeleteAddress?addressId={addressId}");
                 response.EnsureSuccessStatusCode();
                 var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
-                
+
                 if (result != null)
                 {
                     return result.Success;
@@ -168,20 +189,21 @@ namespace BlazorWebApp.Services
 
         public async Task<bool> SetDefaultAddressAsync(int addressId, int userId)
         {
+            await SetAuthorizationHeader();
             try
             {
-                
+
                 // Unset tất cả địa chỉ default khác của user này
                 await UnsetOtherDefaultAddresses(userId, addressId);
-                
-                var response = await _httpClient.PutAsync($"http://localhost:5166/api/Address/SetDefaultAddress?addressId={addressId}&userId={userId}", null);
-                
+
+                var response = await _httpClient.PutAsync($"https://localhost:7260/api/Address/SetDefaultAddress?addressId={addressId}&userId={userId}", null);
+
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<HTTPResponseClient<string>>();
                     return result?.Success ?? false;
                 }
-                
+
                 return false;
             }
             catch (Exception)
@@ -192,13 +214,14 @@ namespace BlazorWebApp.Services
 
         private async Task UnsetOtherDefaultAddresses(int userId, int? excludeAddressId = null)
         {
+            await SetAuthorizationHeader();
             try
             {
                 var addresses = await GetAddressesByUserIdAsync(userId);
                 foreach (var addr in addresses.Where(a => a.IsDefault == true && a.AddressId != excludeAddressId))
                 {
                     addr.IsDefault = false;
-                    await _httpClient.PutAsJsonAsync($"http://localhost:5166/api/Address/UpdateAddress", addr);
+                    await _httpClient.PutAsJsonAsync($"https://localhost:7260/api/Address/UpdateAddress", addr);
                 }
             }
             catch (Exception)

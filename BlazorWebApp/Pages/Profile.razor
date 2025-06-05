@@ -818,7 +818,7 @@ else
     {
         try
         {
-            if (!SignalRService.IsConnected)
+            if (!SignalRService.IsMainHubConnected)
             {
                 Console.WriteLine("🔄 SignalR not connected, attempting to reconnect...");
                 await SignalRService.StartConnectionAsync();
@@ -909,7 +909,7 @@ else
         SignalRService.UserStatusChanged += OnUserStatusChanged;
 
         // Start connection if not already connected
-        if (!SignalRService.IsConnected)
+        if (!SignalRService.IsMainHubConnected)
         {
             await SignalRService.StartConnectionAsync();
         }

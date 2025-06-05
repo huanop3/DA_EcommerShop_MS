@@ -316,13 +316,13 @@
             SignalRService.SellerProfileUnverified += OnSellerProfileUnverified;
 
             // Start connection if not already connected
-            if (!SignalRService.IsConnected)
+            if (!SignalRService.IsMainHubConnected)
             {
                 Console.WriteLine("🔔 Starting SignalR connection...");
                 await SignalRService.StartConnectionAsync();
             }
-            
-            Console.WriteLine($"🔔 SignalR connection status: {SignalRService.IsConnected}");
+
+            Console.WriteLine($"🔔 SignalR connection status: {SignalRService.IsMainHubConnected}");
         }
         catch (Exception ex)
         {

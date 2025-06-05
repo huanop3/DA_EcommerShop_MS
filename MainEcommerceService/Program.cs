@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using MainEcommerceService.Hubs;
+using MainEcommerceService.Kafka;
 using MainEcommerceService.Models.dbMainEcommer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -92,7 +93,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddScoped<JwtAuthService>();
 // Thêm dịch vụ Authorization để hỗ trợ phân quyền người dùng
 builder.Services.AddAuthorization();
-
+builder.Services.AddScoped<IKafkaProducerService, KafkaProducerService>();
+builder.Services.AddHostedService<KafkaConsumerService>();
 //DI Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
@@ -154,7 +156,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", builder =>
         builder
-            .WithOrigins("http://localhost:5093") // Thêm tất cả domain client của bạn
+            .WithOrigins("http://localhost:5093", "https://localhost:7257") // Thêm tất cả domain client của bạn
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials()); // Quan trọng cho SignalR

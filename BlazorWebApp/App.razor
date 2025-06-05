@@ -6,6 +6,9 @@
     <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <Authorizing>
+                    @* Để trống để không hiển thị gì *@
+                </Authorizing>
                 <NotAuthorized>
                     @if (context.User.Identity?.IsAuthenticated != true)
                     {
@@ -22,9 +25,9 @@
 
                                     <div class="auth-form fade-in">
                                         <div class="form-submit" style="margin-top: 25px;">
-                                            <NavLink href="/login" class="btn-submit">
+                                            <a href="/login" class="btn-submit">
                                                 <i class="fas fa-sign-in-alt mr-2"></i> Đăng nhập
-                                            </NavLink>
+                                            </a>
                                         </div>
 
                                         <div class="auth-divider">
@@ -32,7 +35,7 @@
                                         </div>
 
                                         <div class="auth-footer">
-                                            <p>Quay lại <NavLink href="/">Trang chủ</NavLink>
+                                            <p>Quay lại <a href="/">Trang chủ</a>
                                             </p>
                                         </div>
                                     </div>
@@ -60,9 +63,9 @@
                                         </div>
 
                                         <div class="form-submit" style="margin-top: 25px;">
-                                            <NavLink href="/" class="btn-submit">
+                                            <a href="/" class="btn-submit">
                                                 <i class="fas fa-home mr-2"></i> Về trang chủ
-                                            </NavLink>
+                                            </a>
                                         </div>
 
                                         <div class="auth-divider">

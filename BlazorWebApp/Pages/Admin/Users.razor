@@ -132,10 +132,36 @@
         SignalRService.UserCreated += HandleUserCreated;
         SignalRService.UserUpdated += HandleUserUpdated;
         SignalRService.UserDeleted += HandleUserDeleted;
-        
         SignalRService.UserStatusChanged += HandleUserStatusChanged;
     }
 
+    // 🔥 OPTIMIZED: Debounced refresh để tránh multiple refreshes
+    private Timer? _refreshTimer;
+    private readonly object _refreshLock = new object();
+
+    private void RefreshUsers()
+    {
+        lock (_refreshLock)
+        {
+            _refreshTimer?.Dispose();
+            _refreshTimer = new Timer(async _ =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    var previousCount = users.Count;
+                    await LoadUsersAsync();
+                    
+                    var newCount = users.Count;
+                    if (newCount != previousCount)
+                    {
+                        Console.WriteLine($"🔄 Users list updated: {previousCount} → {newCount} users");
+                    }
+                    
+                    StateHasChanged();
+                });
+            }, null, TimeSpan.FromMilliseconds(300), Timeout.InfiniteTimeSpan); // Debounce 300ms
+        }
+    }
     private void HandleUserUpdated(int userId, string username)
     {
         Console.WriteLine($"🔔 Admin Users page received UserUpdated: UserId={userId}, Username={username}");
@@ -167,23 +193,6 @@
         
         var severity = status == "Active" ? Severity.Success : Severity.Warning;
         Snackbar.Add($"User {username} status changed to {status}", severity);
-    }
-
-    private void RefreshUsers()
-    {
-        _ = InvokeAsync(async () =>
-        {
-            var previousCount = users.Count;
-            await LoadUsersAsync();
-            
-            var newCount = users.Count;
-            if (newCount != previousCount)
-            {
-                Console.WriteLine($"🔄 Users list updated: {previousCount} → {newCount} users");
-            }
-            
-            StateHasChanged();
-        });
     }
 
     private async Task LoadRolesAsync()
@@ -339,6 +348,7 @@
 
     public void Dispose()
     {
+        _refreshTimer?.Dispose();
         SignalRService.UserCreated -= HandleUserCreated;
         SignalRService.UserUpdated -= HandleUserUpdated;
         SignalRService.UserDeleted -= HandleUserDeleted;

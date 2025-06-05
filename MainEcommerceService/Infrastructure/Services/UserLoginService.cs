@@ -230,7 +230,7 @@ public class UserLoginService : IUserLoginService
             // Verify user credentials
             var user = await GetUserByUsername(loginRequest.Username);
 
-            if (user == null || !PasswordHelper.VerifyPassword(loginRequest.Password, user.PasswordHash))
+            if (user != null && !PasswordHelper.VerifyPassword(loginRequest.Password, user.PasswordHash))
             {
                 // Ghi nhận lần đăng nhập thất bại để tính vào giới hạn
                 if (existingClient != null)
@@ -254,6 +254,13 @@ public class UserLoginService : IUserLoginService
                 response.Success = false;
                 response.StatusCode = 401; // Unauthorized
                 response.Message = "Tên đăng nhập hoặc mật khẩu không đúng";
+                return response;
+            }
+            if (user == null)
+            {
+                response.Success = false;
+                response.StatusCode = 404; // Not Found
+                response.Message = "Người dùng không tồn tại";
                 return response;
             }
             if (user.IsDeleted == true)
@@ -490,7 +497,7 @@ public class UserLoginService : IUserLoginService
                 }
 
                 // Kiểm tra expiry của refresh token
-                if (existingRefreshToken.ExpiryDate <= DateTime.Now)
+                if (existingRefreshToken.ExpiryDate <= DateTime.Now.AddMinutes(5))
                 {
                     // Revoke expired refresh token
                     existingRefreshToken.IsRevoked = true;

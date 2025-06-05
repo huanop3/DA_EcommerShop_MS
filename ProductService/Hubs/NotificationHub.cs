@@ -56,10 +56,10 @@ namespace ProductService.Hubs
         }
 
         // Category Operations
-        public async Task NotifyCategoryCreated(int categoryId, string categoryName)
+        public async Task NotifyCategoryCreated(string categoryName)
         {
-            _logger.LogInformation($"Gửi thông báo tạo danh mục mới: {categoryId} - {categoryName}");
-            await Clients.All.SendAsync("CategoryCreated", categoryId, categoryName);
+            _logger.LogInformation($"Gửi thông báo tạo danh mục mới: {categoryName}");
+            await Clients.All.SendAsync("CategoryCreated", categoryName);
         }
 
         public async Task NotifyCategoryUpdated(int categoryId, string categoryName)
@@ -74,27 +74,6 @@ namespace ProductService.Hubs
             _logger.LogInformation($"Gửi thông báo xóa danh mục: {categoryId} - {categoryName}");
             await Clients.All.SendAsync("CategoryDeleted", categoryId, categoryName);
         }
-
-        // Product Review Operations
-        public async Task NotifyNewReview(int productId, string productName, int rating, string reviewerName)
-        {
-            _logger.LogInformation($"Gửi thông báo đánh giá mới cho sản phẩm: {productId} - Rating: {rating}");
-            await Clients.All.SendAsync("NewReview", productId, productName, rating, reviewerName);
-        }
-
-        // Promotion Operations
-        public async Task NotifyPromotionStarted(int promotionId, string promotionName, decimal discountPercent)
-        {
-            _logger.LogInformation($"Gửi thông báo khuyến mãi bắt đầu: {promotionId} - {promotionName}");
-            await Clients.All.SendAsync("PromotionStarted", promotionId, promotionName, discountPercent);
-        }
-
-        public async Task NotifyPromotionEnded(int promotionId, string promotionName)
-        {
-            _logger.LogInformation($"Gửi thông báo khuyến mãi kết thúc: {promotionId} - {promotionName}");
-            await Clients.All.SendAsync("PromotionEnded", promotionId, promotionName);
-        }
-
         // Group Management for Categories
         public async Task JoinCategoryGroup(string categoryId)
         {

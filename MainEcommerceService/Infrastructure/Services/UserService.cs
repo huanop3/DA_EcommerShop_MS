@@ -245,9 +245,28 @@ public class UserService : IUserService
             //Lay roleid trong bang role
             var role = await _unitOfWork._roleRepository.Query()
                 .FirstOrDefaultAsync(r => r.RoleName == userlistVM.Role);
-
-            //Cap nhat role
-            var userRole = await _unitOfWork._userRoleRepository.Query()
+            if (role == null)
+            {
+                response.Success = false;
+                response.StatusCode = 404; // Not Found
+                response.Message = "Không tìm thấy vai trò";
+                return response;
+            }
+            //Kiểm tra nếu trong sellerProfile mà bị xóa thì không cho cập nhật role Seller
+            if (role.RoleName == "Seller")
+            {
+                var sellerProfile = await _unitOfWork._sellerProfileRepository.Query()
+                    .FirstOrDefaultAsync(sp => sp.UserId == userlistVM.Id && sp.IsDeleted == true);
+                if (sellerProfile != null)
+                {
+                    response.Success = false;
+                    response.StatusCode = 400; // Bad Request
+                    response.Message = "Không thể cập nhật vai trò Seller vì người dùng đã bị xóa trong Seller Profile";
+                    return response;
+                }
+            }
+                //Cap nhat role
+                    var userRole = await _unitOfWork._userRoleRepository.Query()
                 .FirstOrDefaultAsync(ur => ur.UserId == userlistVM.Id);
 
             if (userRole != null)
@@ -342,7 +361,6 @@ public class UserService : IUserService
             // Đặt trạng thái xóa cho user
                 user.IsDeleted = true;
             _unitOfWork._userRepository.Update(user);
-
             await _unitOfWork.SaveChangesAsync();
 
             // Commit transaction khi tất cả thành công
@@ -387,6 +405,7 @@ public class UserService : IUserService
             }
             var profileVM = new ProfileVM
             {
+                Id = user.UserId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 UserName = user.Username,

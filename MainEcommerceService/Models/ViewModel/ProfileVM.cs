@@ -9,6 +9,7 @@ namespace MainEcommerceService.Models.ViewModel
     /// </summary>
     public class ProfileVM
     {
+        public int Id { get; set; }
         [MaxLength(50, ErrorMessage = "First name cannot exceed 50 characters")]
         public string? FirstName { get; set; }
 

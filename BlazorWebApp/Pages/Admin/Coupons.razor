@@ -219,7 +219,7 @@
             SignalRService.CouponStatusChanged += OnCouponStatusChanged;
 
             // Start connection if not already connected
-            if (!SignalRService.IsConnected)
+            if (!SignalRService.IsMainHubConnected)
             {
                 await SignalRService.StartConnectionAsync();
             }

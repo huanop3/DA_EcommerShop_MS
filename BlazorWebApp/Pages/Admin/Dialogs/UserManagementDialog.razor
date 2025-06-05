@@ -167,8 +167,6 @@
     // 🔥 IMPROVED SaveChanges method với enhanced SignalR
     private async Task SaveChanges()
     {
-        try
-        {
             // Update model với giá trị từ editableUser
             userToUpdate.FirstName = editableUser.FirstName;
             userToUpdate.LastName = editableUser.LastName;
@@ -186,8 +184,8 @@
             
             // Call API to update user
             var result = await UserService.UpdateUserAsync(userToUpdate);
-            
-            if (result)
+
+            if (result.Success)
             {
                 var fullName = GetFullName();
                 Snackbar.Add($"User {fullName} updated successfully", Severity.Success);
@@ -235,15 +233,10 @@
             }
             else
             {
-                Snackbar.Add("Failed to update user", Severity.Error);
+                Snackbar.Add($"Failed to update user: {result.Message}", Severity.Error);
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ Error updating user in dialog: {ex.Message}");
-            Snackbar.Add($"Error updating user: {ex.Message}", Severity.Error);
-        }
-    }
+
     
     // 🔥 IMPROVED ConfirmDeleteUser method
     private async Task ConfirmDeleteUser()

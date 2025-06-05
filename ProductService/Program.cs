@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using ProductService.Hubs;
 using ProductService.Models.dbProduct;
 using StackExchange.Redis;
 
@@ -91,14 +92,16 @@ builder.Services.AddScoped<JwtAuthService>();
 
 // Thêm dịch vụ Authorization để hỗ trợ phân quyền người dùng
 builder.Services.AddAuthorization();
+builder.Services.AddScoped<IKafkaProducerService, KafkaProducerService>();
+builder.Services.AddHostedService<KafkaConsumerService>();
 //DI Repository
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
-
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 //DI UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 //DI Service
-
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IProdService, ProdService>();
 builder.Services.AddHttpClient();
 // Lấy chuỗi kết nối Redis từ cấu hình
 var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection");
@@ -106,9 +109,11 @@ var redisConnectionString = builder.Configuration.GetConnectionString("RedisConn
 // Thêm SignalR với Redis Backplane
 builder.Services.AddSignalR(options =>
 {
-    options.KeepAliveInterval = TimeSpan.FromSeconds(15); // Giảm xuống từ 30s mặc định
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30); // Giảm xuống từ 60s
+    options.EnableDetailedErrors = true;
+    options.MaximumReceiveMessageSize = 32 * 1024; // 32KB
     options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
 })
     .AddStackExchangeRedis(redisConnectionString, options => {
         options.Configuration.ChannelPrefix = "ProductService"; // Tiền tố để phân biệt các kênh SignalR
@@ -135,7 +140,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", builder =>
         builder
-            .WithOrigins("http://localhost:5093") // Thêm tất cả domain client của bạn
+            .WithOrigins("http://localhost:5093", "https://localhost:7257") // Thêm tất cả domain client của bạn
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials()); // Quan trọng cho SignalR
@@ -160,5 +165,6 @@ app.UseAuthorization();
 
 // MapControllers phải đặt sau Authentication và Authorization
 app.MapControllers();
+app.MapHub<NotificationHub>("/notificationHub");
 app.Run();
 
